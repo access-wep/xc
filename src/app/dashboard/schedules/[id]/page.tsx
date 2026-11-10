@@ -2,35 +2,28 @@
 
 export const runtime = 'edge'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
-import {
-  Button,
-  Input,
-  Card,
-  Modal,
-  Select,
-  Textarea,
-  Badge,
-  ProgressBar,
-} from '@/components/ui'
+import { ViewSwitcher, type ViewMode } from '@/components/dashboard/ViewSwitcher'
+import { KPIStatsBar } from '@/components/dashboard/KPIStatsBar'
+import { DailyTaskTableView } from '@/components/dashboard/DailyTaskTableView'
+import { WeeklyScheduleGridView } from '@/components/dashboard/WeeklyScheduleGridView'
+import { MonthlyHabitsTrackerView } from '@/components/dashboard/MonthlyHabitsTrackerView'
+import { calculateDayCompletion, calculateStreakStats } from '@/lib/productivity'
+import { Modal, Input, Textarea, Select, Button, Badge } from '@/components/ui'
 import {
   CalendarDays,
-  CheckCircle2,
+  ArrowRight,
   Clock,
-  Plus,
-  Trash2,
-  Edit2,
+  Sparkles,
+  BarChart3,
+  Calendar,
+  Layers,
   ChevronRight,
   ChevronLeft,
-  ArrowRight,
-  Calendar,
-  AlertTriangle,
-  FileText,
-  Filter,
 } from 'lucide-react'
 import type {
   Schedule,
@@ -38,6 +31,9 @@ import type {
   Task,
   TaskPriority,
   TaskStatus,
+  TaskCategory,
+  Habit,
+  HabitLog,
 } from '@/types/database'
 
 export default function ScheduleDetailPage() {
@@ -47,177 +43,324 @@ export default function ScheduleDetailPage() {
   const { user } = useAuth()
   const supabase = createClient()
 
+  // Primary State
   const [schedule, setSchedule] = useState<Schedule | null>(null)
   const [days, setDays] = useState<ScheduleDay[]>([])
-  const [selectedDay, setSelectedDay] = useState<ScheduleDay | null>(null)
+  const [selectedDayId, setSelectedDayId] = useState<string>('')
+  const [currentDate, setCurrentDate] = useState<Date>(new Date())
+  const [viewMode, setViewMode] = useState<ViewMode>('daily')
   const [tasks, setTasks] = useState<Task[]>([])
+  const [categories, setCategories] = useState<TaskCategory[]>([])
+  const [habits, setHabits] = useState<Habit[]>([])
+  const [habitLogs, setHabitLogs] = useState<Record<string, boolean>>({})
   const [isLoading, setIsLoading] = useState(true)
 
-  // Task Modal states
+  // Edit / Add Task Modal
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
-  const [deletingTask, setDeletingTask] = useState<Task | null>(null)
+  const [taskModalDayId, setTaskModalDayId] = useState<string>('')
+  const [modalTitle, setModalTitle] = useState('')
+  const [modalDescription, setModalDescription] = useState('')
+  const [modalStartTime, setModalStartTime] = useState('')
+  const [modalEndTime, setModalEndTime] = useState('')
+  const [modalPriority, setModalPriority] = useState<TaskPriority>('medium')
+  const [modalStatus, setModalStatus] = useState<TaskStatus>('not_started')
+  const [modalNotes, setModalNotes] = useState('')
+  const [modalColor, setModalColor] = useState('#10b981')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Task form fields
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
-  const [durationMinutes, setDurationMinutes] = useState<number | ''>('')
-  const [priority, setPriority] = useState<TaskPriority>('medium')
-  const [status, setStatus] = useState<TaskStatus>('not_started')
-  const [notes, setNotes] = useState('')
-
-  // 1. Fetch Schedule and Days
-  const fetchScheduleAndDays = async () => {
+  // 1. Fetch Schedule, Days, and ALL Tasks for this schedule
+  const loadScheduleData = async () => {
     if (!user || !scheduleId) return
     setIsLoading(true)
 
     try {
-      // Fetch schedule info
-      const { data: scheduleData, error: sError } = await supabase
+      // 1. Schedule info
+      const { data: sData, error: sErr } = await supabase
         .from('schedules')
         .select('*')
         .eq('id', scheduleId)
         .eq('user_id', user.id)
         .single()
 
-      if (sError) throw sError
-      setSchedule(scheduleData)
+      if (sErr) throw sErr
+      setSchedule(sData)
 
-      // Fetch days
-      const { data: daysData, error: dError } = await supabase
+      // 2. Schedule days
+      const { data: dData, error: dErr } = await supabase
         .from('schedule_days')
         .select('*')
         .eq('schedule_id', scheduleId)
         .order('date', { ascending: true })
 
-      if (dError) throw dError
-      setDays(daysData || [])
+      if (dErr) throw dErr
+      const scheduleDays: ScheduleDay[] = dData || []
+      setDays(scheduleDays)
 
-      // Select today's date if within range, else first day
+      // Pick selected day
       const todayStr = new Date().toISOString().split('T')[0]
-      const matchingDay = daysData?.find((d) => d.date === todayStr)
+      const matchingDay = scheduleDays.find((d) => d.date === todayStr)
       if (matchingDay) {
-        setSelectedDay(matchingDay)
-      } else if (daysData && daysData.length > 0) {
-        setSelectedDay(daysData[0])
+        setSelectedDayId(matchingDay.id)
+        setCurrentDate(new Date(matchingDay.date))
+      } else if (scheduleDays.length > 0) {
+        setSelectedDayId(scheduleDays[0].id)
+        setCurrentDate(new Date(scheduleDays[0].date))
       }
+
+      // 3. Fetch ALL tasks for this schedule
+      const { data: tData, error: tErr } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('schedule_id', scheduleId)
+        .order('sort_order', { ascending: true })
+
+      if (tErr) throw tErr
+      setTasks(tData || [])
+
+      // 4. Fetch categories
+      const { data: catData } = await supabase
+        .from('task_categories')
+        .select('*')
+        .eq('user_id', user.id)
+      setCategories(catData || [])
+
+      // 5. Fetch habits & habit logs
+      const { data: hData } = await supabase
+        .from('habits')
+        .select('*')
+        .eq('user_id', user.id)
+      setHabits(hData || [])
+
+      const { data: hlData } = await supabase
+        .from('habit_logs')
+        .select('*')
+        .eq('user_id', user.id)
+
+      const logsMap: Record<string, boolean> = {}
+      ;(hlData || []).forEach((l: HabitLog) => {
+        if (l.is_completed) logsMap[`${l.habit_id}_${l.date}`] = true
+      })
+      setHabitLogs(logsMap)
     } catch (err) {
-      console.error('Error loading schedule:', err)
+      console.error('Error loading schedule workspace:', err)
     } finally {
       setIsLoading(false)
     }
   }
 
-  // 2. Fetch Tasks for Selected Day
-  const fetchTasksForDay = async (dayId: string) => {
+  useEffect(() => {
+    loadScheduleData()
+  }, [user, scheduleId])
+
+  // Map tasks by day ID
+  const tasksByDayId = useMemo(() => {
+    const map: Record<string, Task[]> = {}
+    tasks.forEach((t) => {
+      if (!map[t.schedule_day_id]) map[t.schedule_day_id] = []
+      map[t.schedule_day_id].push(t)
+    })
+    return map
+  }, [tasks])
+
+  // Selected Day and its tasks
+  const selectedDay = useMemo(() => {
+    return days.find((d) => d.id === selectedDayId) || days[0] || null
+  }, [days, selectedDayId])
+
+  const selectedDayTasks = useMemo(() => {
+    if (!selectedDay) return []
+    return tasksByDayId[selectedDay.id] || []
+  }, [selectedDay, tasksByDayId])
+
+  // Compute KPI Stats for selected day
+  const dayStats = useMemo(() => {
+    return calculateDayCompletion(selectedDayTasks)
+  }, [selectedDayTasks])
+
+  // Compute Streaks for this schedule
+  const streakStats = useMemo(() => {
+    const daysWithTasks = days.map((d) => ({
+      ...d,
+      tasks: tasksByDayId[d.id] || [],
+    }))
+    return calculateStreakStats(daysWithTasks, currentDate)
+  }, [days, tasksByDayId, currentDate])
+
+  // Synchronize current date changes with selected day
+  const handleDateChange = (newDate: Date) => {
+    setCurrentDate(newDate)
+    const dStr = newDate.toISOString().split('T')[0]
+    const matching = days.find((d) => d.date === dStr)
+    if (matching) {
+      setSelectedDayId(matching.id)
+    }
+  }
+
+  const handleSelectDay = (day: ScheduleDay) => {
+    setSelectedDayId(day.id)
+    setCurrentDate(new Date(day.date))
+  }
+
+  // 2. Task Actions
+  const handleToggleTask = async (taskId: string, currentCompleted: boolean) => {
+    const newCompleted = !currentCompleted
+    const newStatus: TaskStatus = newCompleted ? 'completed' : 'not_started'
+
+    // Optimistic update
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId ? { ...t, is_completed: newCompleted, status: newStatus } : t
+      )
+    )
+
+    try {
+      await supabase
+        .from('tasks')
+        .update({ is_completed: newCompleted, status: newStatus })
+        .eq('id', taskId)
+    } catch (err) {
+      console.error('Error toggling task:', err)
+      loadScheduleData()
+    }
+  }
+
+  const handleUpdateStatus = async (taskId: string, newStatus: TaskStatus) => {
+    const isCompleted = newStatus === 'completed'
+
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId ? { ...t, status: newStatus, is_completed: isCompleted } : t
+      )
+    )
+
+    try {
+      await supabase
+        .from('tasks')
+        .update({ status: newStatus, is_completed: isCompleted })
+        .eq('id', taskId)
+    } catch (err) {
+      console.error('Error updating status:', err)
+      loadScheduleData()
+    }
+  }
+
+  const handleQuickAddTask = async (taskData: Partial<Task>) => {
+    if (!user || !selectedDay) return
+
     try {
       const { data, error } = await supabase
         .from('tasks')
-        .select('*')
-        .eq('schedule_day_id', dayId)
-        .order('sort_order', { ascending: true })
+        .insert({
+          schedule_day_id: selectedDay.id,
+          schedule_id: scheduleId,
+          user_id: user.id,
+          title: taskData.title,
+          start_time: taskData.start_time,
+          end_time: taskData.end_time,
+          priority: taskData.priority || 'medium',
+          status: 'not_started',
+          is_completed: false,
+          color: taskData.color || '#10b981',
+          sort_order: selectedDayTasks.length,
+        })
+        .select()
+        .single()
 
       if (error) throw error
-      setTasks(data || [])
+      if (data) {
+        setTasks((prev) => [...prev, data])
+      }
     } catch (err) {
-      console.error('Error fetching tasks for day:', err)
+      console.error('Error adding task:', err)
     }
   }
 
-  useEffect(() => {
-    fetchScheduleAndDays()
-  }, [user, scheduleId])
-
-  useEffect(() => {
-    if (selectedDay) {
-      fetchTasksForDay(selectedDay.id)
-    }
-  }, [selectedDay])
-
-  // Reset Task Form
-  const resetTaskForm = () => {
-    setTitle('')
-    setDescription('')
-    setStartTime('')
-    setEndTime('')
-    setDurationMinutes('')
-    setPriority('medium')
-    setStatus('not_started')
-    setNotes('')
+  const handleOpenModalForDay = (dayId: string) => {
+    setTaskModalDayId(dayId)
     setEditingTask(null)
-  }
-
-  // Open Edit Task Modal
-  const openEditTask = (task: Task) => {
-    setEditingTask(task)
-    setTitle(task.title)
-    setDescription(task.description || '')
-    setStartTime(task.start_time || '')
-    setEndTime(task.end_time || '')
-    setDurationMinutes(task.duration_minutes || '')
-    setPriority(task.priority)
-    setStatus(task.status)
-    setNotes(task.notes || '')
+    setModalTitle('')
+    setModalDescription('')
+    setModalStartTime('')
+    setModalEndTime('')
+    setModalPriority('medium')
+    setModalStatus('not_started')
+    setModalNotes('')
+    setModalColor('#10b981')
     setIsTaskModalOpen(true)
   }
 
-  // Handle Save Task (Create or Update)
-  const handleSaveTask = async (e: React.FormEvent) => {
+  const handleOpenEditModal = (task: Task) => {
+    setEditingTask(task)
+    setTaskModalDayId(task.schedule_day_id)
+    setModalTitle(task.title)
+    setModalDescription(task.description || '')
+    setModalStartTime(task.start_time || '')
+    setModalEndTime(task.end_time || '')
+    setModalPriority(task.priority)
+    setModalStatus(task.status)
+    setModalNotes(task.notes || '')
+    setModalColor(task.color || '#10b981')
+    setIsTaskModalOpen(true)
+  }
+
+  const handleSaveModalTask = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user || !selectedDay || !schedule) return
+    if (!user || !modalTitle.trim()) return
+
     setIsSubmitting(true)
+    const isCompleted = modalStatus === 'completed'
 
     try {
-      const isCompleted = status === 'completed'
-
       if (editingTask) {
-        // Update task
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('tasks')
           .update({
-            title,
-            description: description || null,
-            start_time: startTime || null,
-            end_time: endTime || null,
-            duration_minutes: durationMinutes ? Number(durationMinutes) : null,
-            priority,
-            status,
+            title: modalTitle.trim(),
+            description: modalDescription.trim() || null,
+            start_time: modalStartTime || null,
+            end_time: modalEndTime || null,
+            priority: modalPriority,
+            status: modalStatus,
             is_completed: isCompleted,
-            notes: notes || null,
-            updated_at: new Date().toISOString(),
+            notes: modalNotes.trim() || null,
+            color: modalColor,
           })
           .eq('id', editingTask.id)
+          .select()
+          .single()
 
         if (error) throw error
+        setTasks((prev) => prev.map((t) => (t.id === editingTask.id ? data : t)))
       } else {
-        // Insert new task
-        const { error } = await supabase.from('tasks').insert({
-          schedule_day_id: selectedDay.id,
-          schedule_id: schedule.id,
-          user_id: user.id,
-          title,
-          description: description || null,
-          start_time: startTime || null,
-          end_time: endTime || null,
-          duration_minutes: durationMinutes ? Number(durationMinutes) : null,
-          priority,
-          status,
-          is_completed: isCompleted,
-          notes: notes || null,
-          sort_order: tasks.length + 1,
-        })
+        const targetDayId = taskModalDayId || selectedDay?.id
+        if (!targetDayId) return
+
+        const { data, error } = await supabase
+          .from('tasks')
+          .insert({
+            schedule_day_id: targetDayId,
+            schedule_id: scheduleId,
+            user_id: user.id,
+            title: modalTitle.trim(),
+            description: modalDescription.trim() || null,
+            start_time: modalStartTime || null,
+            end_time: modalEndTime || null,
+            priority: modalPriority,
+            status: modalStatus,
+            is_completed: isCompleted,
+            notes: modalNotes.trim() || null,
+            color: modalColor,
+            sort_order: tasks.length,
+          })
+          .select()
+          .single()
 
         if (error) throw error
+        if (data) setTasks((prev) => [...prev, data])
       }
 
       setIsTaskModalOpen(false)
-      resetTaskForm()
-      fetchTasksForDay(selectedDay.id)
-      // Refresh days to get updated day completion status
-      fetchScheduleAndDays()
     } catch (err) {
       console.error('Error saving task:', err)
     } finally {
@@ -225,587 +368,389 @@ export default function ScheduleDetailPage() {
     }
   }
 
-  // Toggle Task Completion Checkbox
-  const toggleTaskCompletion = async (task: Task) => {
-    const nextCompleted = !task.is_completed
-    const nextStatus = nextCompleted ? 'completed' : 'not_started'
-
-    // Optimistic UI update
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === task.id
-          ? { ...t, is_completed: nextCompleted, status: nextStatus as any }
-          : t
-      )
-    )
-
+  const handleDeleteTask = async (taskId: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذه المهمة؟')) return
+    setTasks((prev) => prev.filter((t) => t.id !== taskId))
     try {
-      await supabase
-        .from('tasks')
-        .update({
-          is_completed: nextCompleted,
-          status: nextStatus,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', task.id)
-
-      // Refresh day state
-      if (selectedDay) {
-        const { data: updatedDay } = await supabase
-          .from('schedule_days')
-          .select('is_completed')
-          .eq('id', selectedDay.id)
-          .single()
-
-        if (updatedDay) {
-          setSelectedDay((prev) =>
-            prev ? { ...prev, is_completed: updatedDay.is_completed } : null
-          )
-          setDays((prev) =>
-            prev.map((d) =>
-              d.id === selectedDay.id
-                ? { ...d, is_completed: updatedDay.is_completed }
-                : d
-            )
-          )
-        }
-      }
-    } catch (err) {
-      console.error('Failed to toggle task:', err)
-      if (selectedDay) fetchTasksForDay(selectedDay.id)
-    }
-  }
-
-  // Change Task Status directly
-  const handleStatusChange = async (task: Task, newStatus: TaskStatus) => {
-    const isCompleted = newStatus === 'completed'
-
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === task.id
-          ? { ...t, status: newStatus, is_completed: isCompleted }
-          : t
-      )
-    )
-
-    try {
-      await supabase
-        .from('tasks')
-        .update({
-          status: newStatus,
-          is_completed: isCompleted,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', task.id)
-
-      if (selectedDay) fetchScheduleAndDays()
-    } catch (err) {
-      console.error('Error updating status:', err)
-    }
-  }
-
-  // Delete Task
-  const handleDeleteTask = async () => {
-    if (!deletingTask || !selectedDay) return
-    try {
-      await supabase.from('tasks').delete().eq('id', deletingTask.id)
-      setDeletingTask(null)
-      fetchTasksForDay(selectedDay.id)
-      fetchScheduleAndDays()
+      await supabase.from('tasks').delete().eq('id', taskId)
     } catch (err) {
       console.error('Error deleting task:', err)
+      loadScheduleData()
     }
   }
 
-  // Day calculations
-  const requiredTasks = tasks.filter((t) => t.status !== 'cancelled')
-  const completedTasks = requiredTasks.filter((t) => t.is_completed)
-  const dayPercentage =
-    requiredTasks.length > 0
-      ? Math.round((completedTasks.length / requiredTasks.length) * 100)
-      : 0
-  const isDayFullyCompleted =
-    requiredTasks.length > 0 &&
-    requiredTasks.length === completedTasks.length
+  // Habits Handlers for monthly view
+  const handleToggleHabitDate = async (habitId: string, dateStr: string) => {
+    if (!user) return
+    const key = `${habitId}_${dateStr}`
+    const isDone = !!habitLogs[key]
 
-  if (isLoading) {
-    return (
-      <div className="text-center py-20 text-gray-500">
-        جاري تحميل تفاصيل الجدول...
-      </div>
-    )
+    setHabitLogs((prev) => {
+      const next = { ...prev }
+      if (isDone) delete next[key]
+      else next[key] = true
+      return next
+    })
+
+    try {
+      if (isDone) {
+        await supabase
+          .from('habit_logs')
+          .delete()
+          .eq('habit_id', habitId)
+          .eq('date', dateStr)
+          .eq('user_id', user.id)
+      } else {
+        await supabase
+          .from('habit_logs')
+          .upsert(
+            { habit_id: habitId, user_id: user.id, date: dateStr, is_completed: true },
+            { onConflict: 'habit_id,date' }
+          )
+      }
+    } catch (err) {
+      console.error('Error toggling habit:', err)
+    }
   }
 
-  if (!schedule) {
-    return (
-      <div className="text-center py-16">
-        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">
-          الجدول غير موجود أو تم حذفه
-        </h2>
-        <Link
-          href="/dashboard/schedules"
-          className="mt-4 inline-flex items-center gap-2 text-indigo-600 hover:underline"
-        >
-          <ArrowRight className="w-4 h-4" />
-          <span>العودة إلى قائمة الجداول</span>
-        </Link>
-      </div>
-    )
+  const handleAddHabit = async (habitData: Partial<Habit>) => {
+    if (!user) return
+    try {
+      const { data, error } = await supabase
+        .from('habits')
+        .insert({
+          user_id: user.id,
+          name: habitData.name,
+          color: habitData.color || '#10b981',
+          target_days_per_week: 7,
+          sort_order: habits.length,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      if (data) setHabits((prev) => [...prev, data])
+    } catch (err) {
+      console.error('Error adding habit:', err)
+    }
+  }
+
+  const handleDeleteHabit = async (habitId: string) => {
+    if (!user) return
+    if (!confirm('حذف هذه العادة؟')) return
+    setHabits((prev) => prev.filter((h) => h.id !== habitId))
+    try {
+      await supabase.from('habits').delete().eq('id', habitId).eq('user_id', user.id)
+    } catch (err) {
+      console.error('Error deleting habit:', err)
+    }
   }
 
   return (
     <div className="space-y-6">
-      {/* Top Breadcrumb & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-800">
+      {/* 1. Header with Breadcrumb & Schedule Title */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Link
             href="/dashboard/schedules"
-            className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-900 border border-slate-800 transition-colors"
             title="العودة للجداول"
           >
-            <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            <ArrowRight className="w-4 h-4" />
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                {schedule.name}
+              <h1 className="text-xl sm:text-2xl font-black text-white">
+                {schedule?.name || 'تفاصيل الجدول'}
               </h1>
-              <Badge variant="info">
-                {schedule.type === 'daily'
-                  ? 'يومي'
-                  : schedule.type === 'weekly'
-                  ? 'أسبوعي'
-                  : schedule.type === 'monthly'
-                  ? 'شهري'
-                  : schedule.type === 'yearly'
-                  ? 'سنوي'
-                  : 'مخصص'}
+              <Badge variant="info" className="bg-teal-500/20 text-teal-300 border-teal-500/30">
+                {schedule?.type === 'weekly' ? 'أسبوعي' : 'مخصص'}
               </Badge>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              الفترة: من {schedule.start_date} إلى {schedule.end_date} (
-              {days.length} يوم)
+            <p className="text-xs text-slate-400 mt-0.5">
+              تحكم كامل في المهام والأوقات والعادات ونسب الإنجاز التلقائية
             </p>
           </div>
         </div>
 
-        {/* Add Task Button */}
-        <Button
-          onClick={() => {
-            resetTaskForm()
-            setIsTaskModalOpen(true)
-          }}
-          variant="primary"
-          className="gap-2 self-start sm:self-auto"
+        {/* Action Link to Templates */}
+        <Link
+          href="/dashboard/templates"
+          className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white bg-slate-900 border border-slate-800 hover:border-teal-500/40 transition-all shadow-sm"
         >
-          <Plus className="w-4 h-4" />
-          <span>إضافة مهمة لهذا اليوم</span>
-        </Button>
+          <Layers className="w-3.5 h-3.5 text-teal-400" />
+          <span>القوالب الجاهزة</span>
+        </Link>
       </div>
 
-      {/* Main Split Layout: Days Navigator (Side/Top) + Detailed Day Tasks */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Days Navigator Column (4 cols) */}
-        <div className="lg:col-span-4 space-y-4">
-          <Card className="p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-indigo-500" />
-                <span>أيام الجدول ({days.length})</span>
-              </h2>
-              <span className="text-[11px] text-gray-500">
-                {days.filter((d) => d.is_completed).length} أيام مكتملة
+      {/* 2. Unified View Switcher Toolbar (Daily / Weekly / Monthly) */}
+      <ViewSwitcher
+        currentView={viewMode}
+        onViewChange={(vm) => setViewMode(vm)}
+        currentDate={currentDate}
+        onDateChange={handleDateChange}
+        onTodayClick={() => handleDateChange(new Date())}
+      />
+
+      {/* 3. Real-time KPI Stats Bar */}
+      <KPIStatsBar
+        completionRate={dayStats.rate}
+        completedCount={dayStats.completed}
+        remainingCount={dayStats.remaining}
+        cancelledCount={dayStats.cancelled}
+        streakDays={streakStats.currentStreak}
+        dateLabel={viewMode === 'daily' ? 'إنجاز اليوم المختار' : 'إجمالي الإنجاز'}
+      />
+
+      {/* 4. Dynamic Views */}
+      {viewMode === 'daily' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Main Tasks Table (8 cols) */}
+          <div className="lg:col-span-8">
+            <DailyTaskTableView
+              tasks={selectedDayTasks}
+              categories={categories}
+              onToggleTask={handleToggleTask}
+              onUpdateStatus={handleUpdateStatus}
+              onAddTask={handleQuickAddTask}
+              onEditTask={handleOpenEditModal}
+              onDeleteTask={handleDeleteTask}
+            />
+          </div>
+
+          {/* Right Side Widgets (4 cols) matching Image Quadrant 1 */}
+          <div className="lg:col-span-4 space-y-5">
+            {/* Widget 1: Circular Radial Progress */}
+            <div className="rounded-3xl bg-slate-900 border border-slate-800 p-6 shadow-xl flex flex-col items-center justify-center text-center">
+              <span className="text-xs font-bold text-slate-400 mb-4">
+                إجمالي الإنجاز اليوم
               </span>
-            </div>
 
-            {/* Scrollable Days List */}
-            <div className="space-y-2 max-h-[600px] overflow-y-auto pe-1">
-              {days.map((day) => {
-                const isSelected = selectedDay?.id === day.id
-                const isToday =
-                  day.date === new Date().toISOString().split('T')[0]
-
-                return (
-                  <button
-                    key={day.id}
-                    onClick={() => setSelectedDay(day)}
-                    className={`w-full text-start p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                      isSelected
-                        ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-900 dark:text-white shadow-sm ring-1 ring-indigo-600'
-                        : 'border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm">
-                          {day.day_name || 'اليوم'}
-                        </span>
-                        {isToday && (
-                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-600 text-white font-medium">
-                            اليوم
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {day.date}
-                      </span>
-                    </div>
-
-                    {/* Completion Status Indicator */}
-                    <div>
-                      {day.is_completed ? (
-                        <div
-                          className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-semibold"
-                          title="اليوم مكتمل بالكامل"
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>مكتمل</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400">قيد العمل</span>
-                      )}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </Card>
-        </div>
-
-        {/* Detailed Daily Schedule Column (8 cols) */}
-        <div className="lg:col-span-8 space-y-4">
-          <Card className="p-6">
-            {/* Day Header Info & Progress */}
-            <div className="pb-5 border-b border-gray-100 dark:border-gray-800">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                      {selectedDay?.day_name} ({selectedDay?.date})
-                    </h2>
-                    {isDayFullyCompleted && (
-                      <Badge variant="success">مكتمل 100% ✨</Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {completedTasks.length} من {requiredTasks.length} مهام مطلوبة
-                    تم إنجازها
-                  </p>
-                </div>
-
-                <div className="w-full sm:w-48">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-500">نسبة إنجاز اليوم</span>
-                    <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                      {dayPercentage}%
-                    </span>
-                  </div>
-                  <ProgressBar
-                    value={completedTasks.length}
-                    max={Math.max(requiredTasks.length, 1)}
-                    size="sm"
+              <div className="relative w-32 h-32 flex items-center justify-center">
+                <svg className="w-32 h-32 -rotate-90">
+                  <circle
+                    cx="64"
+                    cy="64"
+                    r="52"
+                    stroke="currentColor"
+                    strokeWidth="10"
+                    className="text-slate-800"
+                    fill="transparent"
                   />
+                  <circle
+                    cx="64"
+                    cy="64"
+                    r="52"
+                    stroke="currentColor"
+                    strokeWidth="10"
+                    className="text-teal-400 transition-all duration-700 ease-out"
+                    fill="transparent"
+                    strokeDasharray={2 * Math.PI * 52}
+                    strokeDashoffset={
+                      2 * Math.PI * 52 - (dayStats.rate / 100) * (2 * Math.PI * 52)
+                    }
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute text-center">
+                  <span className="text-3xl font-black text-white">{dayStats.rate}%</span>
                 </div>
+              </div>
+
+              <div className="mt-4 text-xs text-slate-400 font-medium">
+                {dayStats.completed} من أصل {dayStats.required} مهام مطلوبة
               </div>
             </div>
 
-            {/* Tasks List */}
-            <div className="mt-6 space-y-3">
-              {tasks.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 flex items-center justify-center mx-auto mb-3">
-                    <Plus className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-base font-bold text-gray-900 dark:text-white">
-                    لا توجد مهام مسجلة لهذا اليوم بعد
-                  </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">
-                    ابدأ بملء يومك بالمهام المحددة بالأوقات والأولويات ليتم احتساب
-                    إنجازك بدقة.
-                  </p>
-                  <Button
-                    onClick={() => {
-                      resetTaskForm()
-                      setIsTaskModalOpen(true)
-                    }}
-                    variant="primary"
-                    size="sm"
-                    className="mt-4"
-                  >
-                    إضافة مهمة جديدة الآن
-                  </Button>
-                </div>
-              ) : (
-                tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className={`p-4 rounded-2xl border transition-all ${
-                      task.is_completed
-                        ? 'bg-gray-50/70 dark:bg-gray-900/40 border-gray-100 dark:border-gray-800'
-                        : task.status === 'cancelled'
-                        ? 'bg-red-50/30 dark:bg-red-950/20 border-red-100 dark:border-red-900/30 opacity-60'
-                        : 'bg-white dark:bg-gray-800/90 border-gray-200/80 dark:border-gray-700 shadow-sm'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      {/* Checkbox & Details */}
-                      <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                        {/* Interactive Checkbox */}
-                        <button
-                          type="button"
-                          onClick={() => toggleTaskCompletion(task)}
-                          disabled={task.status === 'cancelled'}
-                          className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center transition-colors cursor-pointer flex-shrink-0 ${
-                            task.is_completed
-                              ? 'bg-indigo-600 border-indigo-600 text-white'
-                              : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:border-indigo-400'
-                          }`}
-                        >
-                          {task.is_completed && (
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                          )}
-                        </button>
+            {/* Widget 2: Weekly Performance Bars */}
+            <div className="rounded-3xl bg-slate-900 border border-slate-800 p-6 shadow-xl">
+              <span className="text-xs font-bold text-slate-400 mb-4 block">
+                أداء الأيام في هذا الجدول
+              </span>
 
-                        {/* Title, description, meta */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4
-                              className={`text-sm font-bold ${
-                                task.is_completed
-                                  ? 'line-through text-gray-400 dark:text-gray-500'
-                                  : task.status === 'cancelled'
-                                  ? 'line-through text-red-400'
-                                  : 'text-gray-900 dark:text-white'
-                              }`}
-                            >
-                              {task.title}
-                            </h4>
+              <div className="h-28 flex items-end justify-between gap-1.5 pt-2">
+                {days.slice(0, 7).map((d) => {
+                  const dTasks = tasksByDayId[d.id] || []
+                  const stats = calculateDayCompletion(dTasks)
+                  const isCurrent = d.id === selectedDay?.id
+                  const dayNameShort = new Intl.DateTimeFormat('ar-SA', { weekday: 'short' }).format(new Date(d.date))
 
-                            {/* Priority Badge */}
-                            <Badge
-                              variant={
-                                task.priority === 'urgent'
-                                  ? 'danger'
-                                  : task.priority === 'high'
-                                  ? 'warning'
-                                  : task.priority === 'medium'
-                                  ? 'info'
-                                  : 'default'
-                              }
-                              size="sm"
-                            >
-                              {task.priority === 'urgent'
-                                ? 'عاجل'
-                                : task.priority === 'high'
-                                ? 'عالية'
-                                : task.priority === 'medium'
-                                ? 'متوسطة'
-                                : 'منخفضة'}
-                            </Badge>
-
-                            {/* Status Selector */}
-                            <select
-                              value={task.status}
-                              onChange={(e) =>
-                                handleStatusChange(
-                                  task,
-                                  e.target.value as TaskStatus
-                                )
-                              }
-                              className="text-[11px] py-0.5 px-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 cursor-pointer"
-                            >
-                              <option value="not_started">لم تبدأ</option>
-                              <option value="in_progress">قيد التنفيذ</option>
-                              <option value="completed">مكتملة</option>
-                              <option value="postponed">مؤجلة</option>
-                              <option value="cancelled">ملغاة</option>
-                            </select>
-                          </div>
-
-                          {task.description && (
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
-                              {task.description}
-                            </p>
-                          )}
-
-                          {/* Time & Notes row */}
-                          <div className="flex items-center gap-4 mt-2.5 text-[11px] text-gray-500 dark:text-gray-400 flex-wrap">
-                            {(task.start_time || task.end_time) && (
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3.5 h-3.5 text-indigo-500" />
-                                {task.start_time?.slice(0, 5)} -{' '}
-                                {task.end_time?.slice(0, 5)}
-                                {task.duration_minutes &&
-                                  ` (${task.duration_minutes} دقيقة)`}
-                              </span>
-                            )}
-
-                            {task.notes && (
-                              <span className="flex items-center gap-1">
-                                <FileText className="w-3.5 h-3.5 text-amber-500" />
-                                <span>{task.notes}</span>
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                  return (
+                    <div
+                      key={d.id}
+                      onClick={() => handleSelectDay(d)}
+                      className="flex-1 flex flex-col items-center gap-1.5 cursor-pointer group"
+                    >
+                      <div
+                        className={`w-full max-w-[28px] rounded-t-lg transition-all duration-500 relative flex items-start justify-center pt-1 ${
+                          isCurrent
+                            ? 'bg-teal-400 shadow-md shadow-teal-500/30'
+                            : stats.is100Percent
+                            ? 'bg-emerald-500/80'
+                            : 'bg-slate-800 hover:bg-slate-700'
+                        }`}
+                        style={{ height: `${Math.max(16, (stats.rate / 100) * 75)}px` }}
+                      >
+                        <span className="text-[9px] font-bold text-slate-950 font-mono">
+                          {stats.rate}%
+                        </span>
                       </div>
-
-                      {/* Actions: Edit & Delete */}
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => openEditTask(task)}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                          title="تعديل المهمة"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeletingTask(task)}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                          title="حذف المهمة"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                      <span
+                        className={`text-[10px] font-medium transition-colors ${
+                          isCurrent ? 'text-teal-400 font-bold' : 'text-slate-400'
+                        }`}
+                      >
+                        {dayNameShort}
+                      </span>
                     </div>
-                  </div>
-                ))
-              )}
+                  )
+                })}
+              </div>
             </div>
-          </Card>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Add / Edit Task Modal */}
-      <Modal
-        isOpen={isTaskModalOpen}
-        onClose={() => {
-          setIsTaskModalOpen(false)
-          resetTaskForm()
-        }}
-        title={editingTask ? 'تعديل المهمة' : 'إضافة مهمة جديدة'}
-        description={`ليوم: ${selectedDay?.day_name} (${selectedDay?.date})`}
-        size="lg"
-      >
-        <form onSubmit={handleSaveTask} className="space-y-4">
-          <Input
-            label="اسم المهمة *"
-            required
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="مثال: مراجعة التقرير، جلسة تدريب، اجتماع العمل..."
-          />
+      {viewMode === 'weekly' && (
+        <WeeklyScheduleGridView
+          days={days}
+          tasksByDayId={tasksByDayId}
+          selectedDateStr={selectedDay?.date || ''}
+          onSelectDay={handleSelectDay}
+          onToggleTask={handleToggleTask}
+          onAddTaskToDay={handleOpenModalForDay}
+        />
+      )}
 
-          <Textarea
-            label="وصف المهمة"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="تفاصيل المهمة والمخرجات المطلوبة..."
-          />
+      {viewMode === 'monthly' && (
+        <MonthlyHabitsTrackerView
+          habits={habits}
+          habitLogs={habitLogs}
+          currentDate={currentDate}
+          onToggleHabitDate={handleToggleHabitDate}
+          onAddHabit={handleAddHabit}
+          onDeleteHabit={handleDeleteHabit}
+        />
+      )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Input
-              label="وقت البداية"
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-            />
+      {/* 5. Add / Edit Task Modal */}
+      {isTaskModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-md rounded-3xl bg-slate-900 border border-slate-800 p-6 shadow-2xl text-white">
+            <h4 className="text-base font-bold mb-4 flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-teal-400" />
+              <span>{editingTask ? 'تعديل المهمة' : 'إضافة مهمة جديدة'}</span>
+            </h4>
 
-            <Input
-              label="وقت النهاية"
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-            />
+            <form onSubmit={handleSaveModalTask} className="space-y-4 text-xs sm:text-sm">
+              <div>
+                <label className="text-xs font-semibold text-slate-400 block mb-1">
+                  اسم المهمة *
+                </label>
+                <input
+                  type="text"
+                  value={modalTitle}
+                  onChange={(e) => setModalTitle(e.target.value)}
+                  placeholder="اكتب اسم المهمة..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                  required
+                  autoFocus
+                />
+              </div>
 
-            <Input
-              label="المدة بالدقائق"
-              type="number"
-              min="1"
-              value={durationMinutes}
-              onChange={(e) =>
-                setDurationMinutes(
-                  e.target.value ? Number(e.target.value) : ''
-                )
-              }
-              placeholder="مثال: 45"
-            />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 block mb-1">
+                    وقت البداية
+                  </label>
+                  <input
+                    type="time"
+                    value={modalStartTime}
+                    onChange={(e) => setModalStartTime(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 block mb-1">
+                    وقت النهاية
+                  </label>
+                  <input
+                    type="time"
+                    value={modalEndTime}
+                    onChange={(e) => setModalEndTime(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 block mb-1">
+                    الأولوية
+                  </label>
+                  <select
+                    value={modalPriority}
+                    onChange={(e) => setModalPriority(e.target.value as TaskPriority)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                  >
+                    <option value="urgent">عاجلة</option>
+                    <option value="high">عالية</option>
+                    <option value="medium">متوسطة</option>
+                    <option value="low">منخفضة</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 block mb-1">
+                    الحالة
+                  </label>
+                  <select
+                    value={modalStatus}
+                    onChange={(e) => setModalStatus(e.target.value as TaskStatus)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                  >
+                    <option value="not_started">لم تبدأ</option>
+                    <option value="in_progress">قيد التنفيذ</option>
+                    <option value="completed">مكتملة</option>
+                    <option value="postponed">مؤجلة</option>
+                    <option value="cancelled">ملغاة</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-400 block mb-1">
+                  ملاحظات إضافية
+                </label>
+                <textarea
+                  value={modalNotes}
+                  onChange={(e) => setModalNotes(e.target.value)}
+                  rows={2}
+                  placeholder="ملاحظات أو تفاصيل المهمة..."
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsTaskModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !modalTitle.trim()}
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 transition-all shadow-md shadow-teal-500/20 disabled:opacity-50 cursor-pointer"
+                >
+                  {isSubmitting ? 'جاري الحفظ...' : editingTask ? 'تحديث المهمة' : 'إضافة المهمة'}
+                </button>
+              </div>
+            </form>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select
-              label="الأولوية"
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as TaskPriority)}
-              options={[
-                { value: 'low', label: 'منخفضة' },
-                { value: 'medium', label: 'متوسطة' },
-                { value: 'high', label: 'عالية' },
-                { value: 'urgent', label: 'عاجلة' },
-              ]}
-            />
-
-            <Select
-              label="الحالة الحالية"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as TaskStatus)}
-              options={[
-                { value: 'not_started', label: 'لم تبدأ' },
-                { value: 'in_progress', label: 'قيد التنفيذ' },
-                { value: 'completed', label: 'مكتملة' },
-                { value: 'postponed', label: 'مؤجلة' },
-                { value: 'cancelled', label: 'ملغاة' },
-              ]}
-            />
-          </div>
-
-          <Input
-            label="ملاحظات إضافية"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="روابط أو مراجع أو تنبيهات..."
-          />
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setIsTaskModalOpen(false)
-                resetTaskForm()
-              }}
-            >
-              إلغاء
-            </Button>
-            <Button type="submit" variant="primary" isLoading={isSubmitting}>
-              {editingTask ? 'حفظ التعديل' : 'إضافة المهمة'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Delete Task Modal */}
-      <Modal
-        isOpen={!!deletingTask}
-        onClose={() => setDeletingTask(null)}
-        title="تأكيد حذف المهمة"
-      >
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-          هل تريد بالتأكيد حذف مهمة{' '}
-          <strong className="text-gray-900 dark:text-white">
-            {deletingTask?.title}
-          </strong>
-          ؟ سيتم إعادة حساب نسبة إنجاز اليوم تلقائيًا.
-        </p>
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={() => setDeletingTask(null)}>
-            إلغاء
-          </Button>
-          <Button variant="danger" onClick={handleDeleteTask}>
-            حذف المهمة
-          </Button>
         </div>
-      </Modal>
+      )}
     </div>
   )
 }

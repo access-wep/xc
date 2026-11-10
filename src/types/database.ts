@@ -150,9 +150,46 @@ export interface Task {
   status: TaskStatus
   is_completed: boolean
   notes: string | null
+  category_id?: string | null
+  color?: string | null
   sort_order: number
   created_at: string
   updated_at: string
+}
+
+export interface Habit {
+  id: string
+  user_id: string
+  name: string
+  icon: string | null
+  color: string | null
+  target_days_per_week: number
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface HabitLog {
+  id: string
+  habit_id: string
+  user_id: string
+  date: string
+  is_completed: boolean
+  created_at: string
+}
+
+export interface ScheduleTemplate {
+  id: string
+  user_id: string | null
+  name: string
+  description: string | null
+  category: 'blank' | 'work' | 'study' | 'balanced' | 'custom'
+  color: string
+  icon: string
+  is_system: boolean
+  structure: Json
+  created_at: string
 }
 
 export interface TaskCategory {

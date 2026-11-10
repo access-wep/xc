@@ -51,7 +51,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       icon: CalendarDays,
     },
     {
-      title: 'الإحصائيات والإنجاز',
+      title: 'متابعة العادات',
+      href: '/dashboard/habits',
+      icon: Sparkles,
+    },
+    {
+      title: 'القوالب الجاهزة',
+      href: '/dashboard/templates',
+      icon: PlusCircle,
+    },
+    {
+      title: 'التحليلات والإنجاز',
       href: '/dashboard/stats',
       icon: BarChart3,
     },
