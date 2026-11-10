@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CurrencyProvider } from "@/contexts/CurrencyContext";
 
 export const metadata: Metadata = {
   title: {
@@ -58,7 +59,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans">
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <CurrencyProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </CurrencyProvider>
         </ThemeProvider>
       </body>
     </html>

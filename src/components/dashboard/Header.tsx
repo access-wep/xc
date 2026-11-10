@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { CurrencySelector } from '@/components/CurrencySelector'
 import { Bell, Menu, Search, Calendar as CalendarIcon } from 'lucide-react'
 
 interface HeaderProps {
@@ -47,6 +48,9 @@ export function Header({ onMenuClick, title }: HeaderProps) {
 
       {/* Right side (in RTL: left side) */}
       <div className="flex items-center gap-3">
+        {/* Country & Currency Switcher */}
+        <CurrencySelector compact />
+
         {/* Notifications button */}
         <button
           className="relative p-2 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer"

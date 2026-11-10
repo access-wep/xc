@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
+import { CurrencySelector } from '@/components/CurrencySelector'
 import { createClient } from '@/lib/supabase/client'
 import {
   Card,
@@ -34,6 +36,7 @@ import type {
 
 export default function SubscriptionPage() {
   const { user } = useAuth()
+  const { currentCountry, formatPrice } = useCurrency()
   const supabase = createClient()
 
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
@@ -119,12 +122,10 @@ export default function SubscriptionPage() {
     loadSubscriptionData()
   }, [user])
 
-  // Price Calculation with Coupon
-  const rawPrice = selectedPlan
-    ? isYearly
-      ? selectedPlan.price_yearly
-      : selectedPlan.price_monthly
-    : 0
+  // Price Calculation tailored to user's Arab country with Coupon
+  const countryMonthly = currentCountry.monthlyPrice
+  const countryYearly = currentCountry.yearlyPrice
+  const rawPrice = isYearly ? countryYearly : countryMonthly
 
   let discountAmount = 0
   if (appliedCoupon) {
@@ -230,15 +231,32 @@ export default function SubscriptionPage() {
 
   return (
     <div className="space-y-8">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <CreditCard className="w-6 h-6 text-indigo-600" />
-          <span>الاشتراكات وخطط الأسعار</span>
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          اختر الباقة المناسبة وقم بالدفع اليدوي السهل عبر الحسابات البنكية والمحافظ الرقمية
-        </p>
+      {/* Page Header with Country & Currency Switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <CreditCard className="w-6 h-6 text-emerald-600" />
+            <span>الاشتراكات وخطط الأسعار للوطن العربي</span>
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            اختر الباقة المناسبة وقم بالدفع بالعملة والوسيلة المحلية في دولتك
+          </p>
+        </div>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <span className="text-xs text-gray-500 hidden sm:inline">دولة الدفع:</span>
+          <CurrencySelector />
+        </div>
+      </div>
+
+      {/* Country Notice Strip */}
+      <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-between gap-3 text-xs text-emerald-900 dark:text-emerald-200">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">{currentCountry.flag}</span>
+          <span>
+            <strong>الأسعار معروضة بـ {currentCountry.currencyName} ({currentCountry.currencySymbol}):</strong>{' '}
+            طرق الدفع المتاحة في {currentCountry.name}: {currentCountry.paymentMethods.join(' • ')}
+          </span>
+        </div>
       </div>
 
       {/* Active Subscription Banner */}
@@ -284,8 +302,10 @@ export default function SubscriptionPage() {
             </p>
 
             <div className="flex items-baseline gap-1 mb-6">
-              <span className="text-4xl font-black text-gray-900 dark:text-white">29</span>
-              <span className="text-sm text-gray-500">ر.س / شهر</span>
+              <span className="text-4xl font-black text-gray-900 dark:text-white">
+                {formatPrice(countryMonthly)}
+              </span>
+              <span className="text-sm text-gray-500">/ شهرياً</span>
             </div>
 
             <ul className="space-y-3 text-xs text-gray-600 dark:text-gray-300 mb-8">
@@ -335,9 +355,13 @@ export default function SubscriptionPage() {
             </p>
 
             <div className="flex items-baseline gap-1 mb-6">
-              <span className="text-4xl font-black text-indigo-600 dark:text-indigo-400">199</span>
-              <span className="text-sm text-gray-500">ر.س / سنة</span>
-              <span className="text-xs text-gray-400 line-through ms-2">348 ر.س</span>
+              <span className="text-4xl font-black text-indigo-600 dark:text-indigo-400">
+                {formatPrice(countryYearly)}
+              </span>
+              <span className="text-sm text-gray-500">/ سنوياً</span>
+              <span className="text-xs text-gray-400 line-through ms-2">
+                {formatPrice(countryMonthly * 12)}
+              </span>
             </div>
 
             <ul className="space-y-3 text-xs text-gray-600 dark:text-gray-300 mb-8">
@@ -468,17 +492,19 @@ export default function SubscriptionPage() {
               </div>
               <div className="flex justify-between items-center text-sm mb-2">
                 <span className="text-gray-600 dark:text-gray-400">السعر الأساسي:</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{rawPrice} ر.س</span>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {formatPrice(rawPrice)}
+                </span>
               </div>
               {appliedCoupon && (
                 <div className="flex justify-between items-center text-sm mb-2 text-emerald-600">
                   <span>الخصم المطبق ({appliedCoupon.code}):</span>
-                  <span>- {discountAmount} ر.س</span>
+                  <span>- {formatPrice(discountAmount)}</span>
                 </div>
               )}
               <div className="flex justify-between items-center text-base font-bold pt-2 border-t border-gray-200 dark:border-gray-700 text-indigo-600 dark:text-indigo-400">
                 <span>المبلغ المطلوب تحويله:</span>
-                <span className="text-xl">{finalPrice} ر.س</span>
+                <span className="text-xl font-extrabold">{formatPrice(finalPrice)}</span>
               </div>
             </div>
 

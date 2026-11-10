@@ -71,3 +71,14 @@ export function isFuture(date: Date): boolean {
   today.setHours(23, 59, 59, 999)
   return date > today
 }
+
+export function formatCurrency(
+  amount: number,
+  symbol: string = 'ر.س',
+  locale: string = 'ar-EG'
+): string {
+  const formatted = new Intl.NumberFormat(locale, {
+    maximumFractionDigits: amount % 1 === 0 ? 0 : 2,
+  }).format(amount)
+  return `${formatted} ${symbol}`
+}
