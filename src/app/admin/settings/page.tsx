@@ -15,6 +15,7 @@ import {
   ExternalLink,
   ShieldCheck,
   Save,
+  Check,
 } from 'lucide-react'
 import type { PaymentMethod } from '@/types/database'
 
@@ -28,6 +29,7 @@ export default function AdminSettingsPage() {
   const [contactPhone, setContactPhone] = useState('+966500000000')
   const [currency, setCurrency] = useState('ر.س')
   const [isSavingSiteInfo, setIsSavingSiteInfo] = useState(false)
+  const [siteInfoSaveSuccess, setSiteInfoSaveSuccess] = useState(false)
 
   // WhatsApp Technical Support State
   const [whatsappNumber, setWhatsappNumber] = useState('+966500000000')
@@ -48,12 +50,12 @@ export default function AdminSettingsPage() {
 
   const loadSettingsAndMethods = async () => {
     try {
-      // 1. Load site settings
+      // 1. Load site settings safely with maybeSingle
       const { data: settings } = await supabase
         .from('site_settings')
         .select('*')
         .eq('key', 'site_info')
-        .single()
+        .maybeSingle()
 
       if (settings?.value) {
         const val = settings.value as any
@@ -87,32 +89,66 @@ export default function AdminSettingsPage() {
     loadSettingsAndMethods()
   }, [])
 
-  // Save General Site Info
-  const handleSaveSiteInfo = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSavingSiteInfo(true)
-    try {
+  // Resilient helper to update site_settings without unique constraint errors
+  const persistSiteSettings = async (partialValues: any) => {
+    const { data: existing } = await supabase
+      .from('site_settings')
+      .select('id, value')
+      .eq('key', 'site_info')
+      .maybeSingle()
+
+    const currentVal = (existing?.value as any) || {}
+    const mergedValue = {
+      ...currentVal,
+      ...partialValues,
+    }
+
+    if (existing?.id) {
       const { error } = await supabase
         .from('site_settings')
-        .upsert({
+        .update({
+          value: mergedValue,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id)
+
+      if (error) throw error
+    } else {
+      const { error } = await supabase
+        .from('site_settings')
+        .insert({
           key: 'site_info',
-          value: {
-            site_name: siteName,
-            site_name_en: siteNameEn,
-            contact_email: supportEmail,
-            contact_phone: contactPhone,
-            currency,
-            whatsapp_number: whatsappNumber,
-            whatsapp_message: whatsappMessage,
-            whatsapp_enabled: whatsappEnabled,
-          },
+          value: mergedValue,
+          description: 'الإعدادات الأساسية للموقع ومعلومات التواصل',
           updated_at: new Date().toISOString(),
         })
 
       if (error) throw error
-      alert('تم حفظ إعدادات الموقع العامة بنجاح!')
+    }
+  }
+
+  // Save General Site Info
+  const handleSaveSiteInfo = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSavingSiteInfo(true)
+    setSiteInfoSaveSuccess(false)
+    try {
+      await persistSiteSettings({
+        site_name: siteName,
+        site_name_en: siteNameEn,
+        contact_email: supportEmail,
+        contact_phone: contactPhone,
+        currency,
+        whatsapp_number: whatsappNumber,
+        whatsapp_message: whatsappMessage,
+        whatsapp_enabled: whatsappEnabled,
+      })
+
+      setSiteInfoSaveSuccess(true)
+      setTimeout(() => setSiteInfoSaveSuccess(false), 4000)
     } catch (err: any) {
-      alert(err.message || 'حدث خطأ أثناء حفظ الإعدادات.')
+      console.error('Error saving site info:', err)
+      alert(err.message || 'حدث خطأ أثناء حفظ معلومات الموقع والتواصل.')
     } finally {
       setIsSavingSiteInfo(false)
     }
@@ -124,17 +160,7 @@ export default function AdminSettingsPage() {
     setIsSavingWhatsApp(true)
     setWhatsappSaveSuccess(false)
     try {
-      // First fetch current settings to avoid overwriting other keys
-      const { data: currentSettings } = await supabase
-        .from('site_settings')
-        .select('value')
-        .eq('key', 'site_info')
-        .single()
-
-      const currentVal = (currentSettings?.value as any) || {}
-
-      const updatedVal = {
-        ...currentVal,
+      await persistSiteSettings({
         site_name: siteName,
         site_name_en: siteNameEn,
         contact_email: supportEmail,
@@ -143,21 +169,12 @@ export default function AdminSettingsPage() {
         whatsapp_number: whatsappNumber.trim(),
         whatsapp_message: whatsappMessage.trim(),
         whatsapp_enabled: whatsappEnabled,
-      }
-
-      const { error } = await supabase
-        .from('site_settings')
-        .upsert({
-          key: 'site_info',
-          value: updatedVal,
-          updated_at: new Date().toISOString(),
-        })
-
-      if (error) throw error
+      })
 
       setWhatsappSaveSuccess(true)
       setTimeout(() => setWhatsappSaveSuccess(false), 4000)
     } catch (err: any) {
+      console.error('Error saving whatsapp settings:', err)
       alert(err.message || 'تعذر حفظ إعدادات الواتساب.')
     } finally {
       setIsSavingWhatsApp(false)
@@ -265,14 +282,71 @@ export default function AdminSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <Settings className="w-6 h-6 text-amber-500" />
-          <span>إعدادات الموقع، الدعم الفني عبر واتساب، وطرق الدفع</span>
+          <span>إعدادات الموقع، معلومات التواصل، والدعم الفني</span>
         </h1>
         <p className="text-xs text-gray-500 mt-1">
-          التحكم الكامل في رقم واتساب الدعم الفني، بيانات المنصة، والحسابات البنكية المعتمدة
+          تعديل معلومات التواصل والبريد والهاتف ورقم واتساب الدعم الفني والحسابات البنكية المعتمدة
         </p>
       </div>
 
-      {/* 1. WhatsApp Customer Support Dedicated Section */}
+      {/* 1. General Site & Contact Info Settings */}
+      <Card className="p-6">
+        <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1">
+          معلومات التواصل والبيانات العامة للمنصة
+        </h3>
+        <p className="text-xs text-gray-500 mb-5">
+          البيانات التي تظهر للزوار في تذييل الموقع وصفحة التواصل واستقبال الرسائل
+        </p>
+
+        <form onSubmit={handleSaveSiteInfo} className="space-y-4 max-w-2xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="اسم الموقع (بالعربية)"
+              value={siteName}
+              onChange={(e) => setSiteName(e.target.value)}
+              required
+            />
+            <Input
+              label="اسم الموقع (بالإنجليزية)"
+              value={siteNameEn}
+              onChange={(e) => setSiteNameEn(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="بريد الدعم الفني والتواصل الرسمي *"
+              type="email"
+              value={supportEmail}
+              onChange={(e) => setSupportEmail(e.target.value)}
+              required
+            />
+            <Input
+              label="رقم الهاتف العام والتواصل *"
+              value={contactPhone}
+              onChange={(e) => setContactPhone(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <Button type="submit" variant="primary" isLoading={isSavingSiteInfo} className="gap-2">
+              <Save className="w-4 h-4" />
+              <span>حفظ معلومات التواصل والبيانات</span>
+            </Button>
+
+            {siteInfoSaveSuccess && (
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                <Check className="w-4 h-4" />
+                <span>تم حفظ معلومات التواصل بنجاح!</span>
+              </span>
+            )}
+          </div>
+        </form>
+      </Card>
+
+      {/* 2. WhatsApp Customer Support Dedicated Section */}
       <Card className="p-6 border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <div className="flex items-center gap-3">
@@ -372,47 +446,6 @@ export default function AdminSettingsPage() {
                 <span>تم حفظ إعدادات الواتساب بنجاح، وستنعكس فوراً على الموقع!</span>
               </span>
             )}
-          </div>
-        </form>
-      </Card>
-
-      {/* 2. General Settings */}
-      <Card className="p-6">
-        <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4">
-          البيانات العامة للمنصة
-        </h3>
-        <form onSubmit={handleSaveSiteInfo} className="space-y-4 max-w-2xl">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="اسم الموقع (بالعربية)"
-              value={siteName}
-              onChange={(e) => setSiteName(e.target.value)}
-            />
-            <Input
-              label="اسم الموقع (بالإنجليزية)"
-              value={siteNameEn}
-              onChange={(e) => setSiteNameEn(e.target.value)}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="بريد الدعم الفني"
-              type="email"
-              value={supportEmail}
-              onChange={(e) => setSupportEmail(e.target.value)}
-            />
-            <Input
-              label="رقم الهاتف العام"
-              value={contactPhone}
-              onChange={(e) => setContactPhone(e.target.value)}
-            />
-          </div>
-
-          <div className="pt-2">
-            <Button type="submit" variant="primary" isLoading={isSavingSiteInfo}>
-              حفظ بيانات الموقع
-            </Button>
           </div>
         </form>
       </Card>

@@ -166,6 +166,52 @@ export default function SubscriptionPage() {
     }
   }
 
+  // Convert image file to optimized Base64 Data URL (ensures image is ALWAYS viewable)
+  const convertFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const rawUrl = e.target?.result as string
+        if (file.type.startsWith('image/')) {
+          const img = new Image()
+          img.onload = () => {
+            const maxDim = 1200
+            let w = img.width
+            let h = img.height
+            if (w > maxDim || h > maxDim) {
+              if (w > h) {
+                h = Math.round((h * maxDim) / w)
+                w = maxDim
+              } else {
+                w = Math.round((w * maxDim) / h)
+                h = maxDim
+              }
+            }
+            const canvas = document.createElement('canvas')
+            canvas.width = w
+            canvas.height = h
+            const ctx = canvas.getContext('2d')
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, w, h)
+              resolve(canvas.toDataURL('image/jpeg', 0.85))
+              return
+            }
+            resolve(rawUrl)
+          }
+          img.onerror = () => resolve(rawUrl)
+          img.src = rawUrl
+        } else {
+          resolve(rawUrl)
+        }
+      }
+      reader.onerror = () => resolve('')
+      reader.readAsDataURL(file)
+    })
+  }
+
+  // State for image preview before upload
+  const [proofPreviewUrl, setProofPreviewUrl] = useState<string | null>(null)
+
   // Submit Payment Request with Proof
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -180,26 +226,32 @@ export default function SubscriptionPage() {
     setPaymentError(null)
 
     try {
-      // 1. Upload proof file to Supabase Storage (bucket: 'payment_proofs')
-      const fileExt = proofFile.name.split('.').pop()
-      const fileName = `${user.id}_${Date.now()}.${fileExt}`
+      // 1. Generate guaranteed high-res Base64 Data URL (Never 404s!)
+      const base64Data = await convertFileToBase64(proofFile)
+      let proofUrl = base64Data || ''
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('payment_proofs')
-        .upload(fileName, proofFile, {
-          cacheControl: '3600',
-          upsert: false,
-        })
+      // 2. Attempt Supabase Storage upload as primary if bucket exists
+      try {
+        const fileExt = proofFile.name.split('.').pop() || 'jpg'
+        const fileName = `${user.id}_${Date.now()}.${fileExt}`
 
-      let proofUrl = null
-      if (uploadData) {
-        const { data: publicUrl } = supabase.storage
+        const { data: uploadData, error: uploadErr } = await supabase.storage
           .from('payment_proofs')
-          .getPublicUrl(fileName)
-        proofUrl = publicUrl.publicUrl
-      } else {
-        // Fallback: mock url for local testing if bucket isn't pre-configured
-        proofUrl = `local_proof_${fileName}`
+          .upload(fileName, proofFile, {
+            cacheControl: '3600',
+            upsert: true,
+          })
+
+        if (!uploadErr && uploadData) {
+          const { data: publicUrl } = supabase.storage
+            .from('payment_proofs')
+            .getPublicUrl(fileName)
+          if (publicUrl?.publicUrl) {
+            proofUrl = publicUrl.publicUrl
+          }
+        }
+      } catch (storageErr) {
+        console.warn('Supabase storage upload bypassed; saved base64 image directly:', storageErr)
       }
 
       // 2. Insert into payment_requests table with 'pending' status
@@ -600,13 +652,33 @@ export default function SubscriptionPage() {
                   type="file"
                   accept="image/*,.pdf"
                   required
-                  onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0] || null
+                    setProofFile(f)
+                    if (f && f.type.startsWith('image/')) {
+                      const prev = await convertFileToBase64(f)
+                      setProofPreviewUrl(prev)
+                    } else {
+                      setProofPreviewUrl(null)
+                    }
+                  }}
                   className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
                 />
                 {proofFile && (
-                  <p className="text-xs font-semibold text-emerald-600 mt-2">
-                    تم اختيار الملف: {proofFile.name}
-                  </p>
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs font-semibold text-emerald-600">
+                      ✓ تم اختيار الملف: {proofFile.name} ({(proofFile.size / 1024).toFixed(0)} ك.ب)
+                    </p>
+                    {proofPreviewUrl && (
+                      <div className="inline-block p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+                        <img
+                          src={proofPreviewUrl}
+                          alt="معاينة إيصال التحويل"
+                          className="h-28 max-w-xs object-contain rounded-lg mx-auto"
+                        />
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

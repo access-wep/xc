@@ -25,6 +25,19 @@ export default function AdminPaymentsPage() {
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [isLoading, setIsLoading] = useState(true)
 
+  // Safe proof URL resolver
+  const resolveProofUrl = (url: string | null) => {
+    if (!url) return null
+    if (url.startsWith('data:image/') || url.startsWith('http://') || url.startsWith('https://')) {
+      return url
+    }
+    if (!url.startsWith('local_proof_')) {
+      const { data } = supabase.storage.from('payment_proofs').getPublicUrl(url)
+      if (data?.publicUrl) return data.publicUrl
+    }
+    return url
+  }
+
   // Review & Action Modal
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null)
   const [rejectionReason, setRejectionReason] = useState('')
@@ -392,38 +405,57 @@ export default function AdminPaymentsPage() {
               </div>
             </div>
 
-            {/* Proof Image Box */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                  صورة إيصال التحويل البنكي المرفق:
-                </label>
-                {selectedRequest.proof_url && (
-                  <a
-                    href={selectedRequest.proof_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1 font-medium"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>فتح الصورة الأصلية في نافذة جديدة</span>
-                  </a>
-                )}
-              </div>
-              {selectedRequest.proof_url ? (
-                <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden max-h-72 flex items-center justify-center bg-gray-900/10">
-                  <img
-                    src={selectedRequest.proof_url}
-                    alt="إيصال التحويل"
-                    className="max-h-72 object-contain"
-                    onError={(e) => {
-                      (e.target as any).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"><text x="20" y="50" fill="gray">إيصال تجريبي محلي</text></svg>'
-                    }}
-                  />
-                </div>
-              ) : (
-                <p className="text-xs text-amber-500">لم يتم إرفاق رابط صورة للإيصال.</p>
-              )}
+            {/* Proof Image Box with Resilient Base64 & Storage Support */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block">
+                صورة إيصال التحويل البنكي المرفق:
+              </label>
+
+              {(() => {
+                const displayUrl = resolveProofUrl(selectedRequest.proof_url)
+                const isLocalMock = selectedRequest.proof_url?.startsWith('local_proof_')
+
+                if (!displayUrl || isLocalMock) {
+                  return (
+                    <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-xs">
+                      <p className="font-bold flex items-center gap-1.5 mb-1">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>إيصال مسجل محلياً أو غير مرفق</span>
+                      </p>
+                      <p className="text-[11px] leading-relaxed">
+                        {isLocalMock
+                          ? `اسم الملف المسجل: ${selectedRequest.proof_url}. تم إرسال هذا الطلب قبل تحديث مشفر الصور المباشر.`
+                          : 'لم يقم العميل بإرفاق صورة إيصال لهذا الطلب.'}
+                      </p>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div className="space-y-2">
+                    <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden max-h-96 flex items-center justify-center bg-gray-50 dark:bg-gray-900/40 p-2">
+                      <img
+                        src={displayUrl}
+                        alt="إيصال التحويل البنكي"
+                        className="max-h-80 w-auto object-contain rounded-lg shadow-sm hover:scale-105 transition-transform duration-200 cursor-zoom-in"
+                        onClick={() => window.open(displayUrl, '_blank')}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1">
+                      <span>اضغط على الصورة لفتحها بالحجم الكامل</span>
+                      <a
+                        href={displayUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold inline-flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>فتح / تحميل الإيصال الأصلي</span>
+                      </a>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
 
             {/* Admin Note / Rejection Reason Input */}

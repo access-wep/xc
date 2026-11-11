@@ -1,5 +1,7 @@
 'use client'
 
+import { createClient } from '@/lib/supabase/client'
+
 import React, { createContext, useContext, useEffect, useState } from 'react'
 
 export interface ArabCountry {
@@ -342,6 +344,55 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
     setMounted(true)
   }, [])
 
+  // Base dynamic prices loaded from DB
+  const [basePrices, setBasePrices] = useState<{ monthly: number; yearly: number }>({
+    monthly: 29,
+    yearly: 199,
+  })
+
+  const refreshPrices = async () => {
+    try {
+      const supabase = createClient()
+      const { data: planData } = await supabase
+        .from('subscription_plans')
+        .select('price_monthly, price_yearly')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (planData && planData.price_monthly && planData.price_yearly) {
+        setBasePrices({
+          monthly: Number(planData.price_monthly),
+          yearly: Number(planData.price_yearly),
+        })
+        return
+      }
+
+      const { data: settingData } = await supabase
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'pricing_config')
+        .maybeSingle()
+
+      if (settingData?.value) {
+        const v = settingData.value
+        if (v.base_monthly_sar && v.base_yearly_sar) {
+          setBasePrices({
+            monthly: Number(v.base_monthly_sar),
+            yearly: Number(v.base_yearly_sar),
+          })
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  useEffect(() => {
+    refreshPrices()
+  }, [])
+
   const setCountryCode = (code: string) => {
     if (ARAB_COUNTRIES[code]) {
       setCountryCodeState(code)
@@ -353,7 +404,21 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const currentCountry = ARAB_COUNTRIES[countryCode] || ARAB_COUNTRIES.SA
+  const rawCountry = ARAB_COUNTRIES[countryCode] || ARAB_COUNTRIES.SA
+  const mRatio = basePrices.monthly / 29
+  const yRatio = basePrices.yearly / 199
+
+  const currentCountry: ArabCountry = {
+    ...rawCountry,
+    monthlyPrice:
+      rawCountry.code === 'SA'
+        ? basePrices.monthly
+        : Math.round(rawCountry.monthlyPrice * mRatio),
+    yearlyPrice:
+      rawCountry.code === 'SA'
+        ? basePrices.yearly
+        : Math.round(rawCountry.yearlyPrice * yRatio),
+  }
 
   const formatPrice = (amount: number, overrideSymbol?: string) => {
     const symbol = overrideSymbol || currentCountry.currencySymbol
