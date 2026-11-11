@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useCurrency } from '@/contexts/CurrencyContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { CurrencySelector } from '@/components/CurrencySelector'
 import {
   Calendar,
@@ -27,6 +28,9 @@ import {
   Building2,
   Wallet,
   ArrowRight,
+  Shield,
+  LogOut,
+  User,
 } from 'lucide-react'
 
 // Demo interactive task type
@@ -42,6 +46,7 @@ interface DemoTask {
 export default function HomePage() {
   const { theme, toggleTheme } = useTheme()
   const { currentCountry, formatPrice } = useCurrency()
+  const { user, profile, isAdmin, signOut } = useAuth()
 
   const [isYearly, setIsYearly] = useState(true)
   const [openFaq, setOpenFaq] = useState<number | null>(0)
@@ -198,19 +203,49 @@ export default function HomePage() {
                 )}
               </button>
 
-              {/* Auth links */}
-              <Link
-                href="/auth/login"
-                className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2.5 sm:px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                دخول
-              </Link>
-              <Link
-                href="/auth/register"
-                className="text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 sm:px-4 py-2 rounded-xl transition-all shadow-sm hover:shadow-md hover:shadow-emerald-600/20 active:scale-95"
-              >
-                ابدأ مجاناً
-              </Link>
+              {/* Auth links & Persistent Session recognition */}
+              {user ? (
+                <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-bold hover:bg-amber-500/20 transition-colors"
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                      <span>لوحة الإدارة</span>
+                    </Link>
+                  )}
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-sm hover:shadow-md hover:shadow-emerald-600/20"
+                  >
+                    <Layers className="w-4 h-4" />
+                    <span>لوحة التحكم ({profile?.full_name?.split(' ')[0] || 'حسابي'})</span>
+                  </Link>
+                  <button
+                    onClick={() => signOut()}
+                    className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    title="تسجيل الخروج"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Link
+                    href="/auth/login"
+                    className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2.5 sm:px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    دخول
+                  </Link>
+                  <Link
+                    href="/auth/register"
+                    className="text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 sm:px-4 py-2 rounded-xl transition-all shadow-sm hover:shadow-md hover:shadow-emerald-600/20 active:scale-95"
+                  >
+                    ابدأ مجاناً
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -247,13 +282,23 @@ export default function HomePage() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 mb-8">
-            <Link
-              href="/auth/register"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-xl text-base font-semibold transition-all shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/30 active:scale-98"
-            >
-              <span>ابدأ تنظيم يومك مجاناً</span>
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
+            {user ? (
+              <Link
+                href="/dashboard"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-xl text-base font-bold transition-all shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/30 active:scale-98"
+              >
+                <span>الذهاب إلى لوحة التحكم الخاصة بك</span>
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
+            ) : (
+              <Link
+                href="/auth/register"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-xl text-base font-semibold transition-all shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/30 active:scale-98"
+              >
+                <span>ابدأ تنظيم يومك مجاناً</span>
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
+            )}
             <a
               href="#demo"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 px-6 py-3.5 rounded-xl text-base font-medium border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"

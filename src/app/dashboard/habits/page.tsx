@@ -3,12 +3,15 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
+import { usePlanFeatures } from '@/hooks/usePlanFeatures'
+import { PaywallLockedCard } from '@/components/dashboard/PaywallLockedCard'
 import { MonthlyHabitsTrackerView } from '@/components/dashboard/MonthlyHabitsTrackerView'
 import type { Habit, HabitLog } from '@/types/database'
 import { Sparkles, Target, Flame, Award, ChevronRight, ChevronLeft } from 'lucide-react'
 
 export default function HabitsPage() {
   const { user } = useAuth()
+  const { canAccessHabits, isLoading: isPlanLoading } = usePlanFeatures()
   const supabase = createClient()
 
   const [habits, setHabits] = useState<Habit[]>([])
@@ -151,6 +154,34 @@ export default function HabitsPage() {
   }
 
   const monthNameArabic = new Intl.DateTimeFormat('ar-SA', { month: 'long', year: 'numeric' }).format(currentDate)
+
+  // Enforce Paywall if Free User & Habits disabled by Admin
+  if (!isPlanLoading && !canAccessHabits) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-emerald-500" />
+            <span>متابعة العادات الشهرية</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            ابنِ عادات قوية وثابتة تدعم إنتاجيتك اليومية ونمط حياتك المتوازن
+          </p>
+        </div>
+
+        <PaywallLockedCard
+          title="متابعة العادات الشهرية (31 يوماً)"
+          description="نظام بناء وتتبع العادات اليومية مع مؤشرات الاستمرارية والألوان التمييزية متاح حصرياً لمشتركي فكرتو برو."
+          features={[
+            'شبكة تتبع العادات الكاملة (31 يوماً في الشهر)',
+            'إحصائيات الإنجاز الشهري ومعدل الالتزام لكل عادة',
+            'إضافة عدد غير محدود من العادات وتخصيص ألوانها',
+            'التزامن الفوري مع جداولك اليومية والأسبوعية',
+          ]}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

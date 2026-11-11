@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
+import { usePlanFeatures } from '@/hooks/usePlanFeatures'
+import { PaywallLockedCard } from '@/components/dashboard/PaywallLockedCard'
 import { ProductivityAnalyticsView } from '@/components/dashboard/ProductivityAnalyticsView'
 import { StreakCalendarView } from '@/components/dashboard/StreakCalendarView'
 import { calculateAnalytics, calculateStreakStats, type AnalyticsSummary, type StreakStats } from '@/lib/productivity'
@@ -11,6 +13,7 @@ import { BarChart3, Flame, TrendingUp, Sparkles, RefreshCw } from 'lucide-react'
 
 export default function StatisticsPage() {
   const { user } = useAuth()
+  const { canAccessAnalytics, canAccessStreaks, isLoading: isPlanLoading } = usePlanFeatures()
   const supabase = createClient()
 
   const [activeTab, setActiveTab] = useState<'analytics' | 'streaks'>('analytics')
@@ -124,15 +127,41 @@ export default function StatisticsPage() {
       </div>
 
       {/* Main Content Area */}
-      {isLoading ? (
+      {isLoading || isPlanLoading ? (
         <div className="py-20 text-center text-slate-400">
           <div className="w-10 h-10 border-4 border-teal-500/20 border-t-teal-500 rounded-full animate-spin mx-auto mb-3" />
           <p className="text-xs font-medium">جاري احتساب مؤشرات الأداء الحقيقية...</p>
         </div>
-      ) : activeTab === 'analytics' && analytics ? (
-        <ProductivityAnalyticsView analytics={analytics} />
-      ) : activeTab === 'streaks' && streakStats ? (
-        <StreakCalendarView stats={streakStats} />
+      ) : activeTab === 'analytics' ? (
+        !canAccessAnalytics ? (
+          <PaywallLockedCard
+            title="تحليلات الأداء والإحصائيات المتقدمة"
+            description="الرسوم البيانية وتوزيع المهام على مدار الأسبوع ومعدلات الإنجاز وأوقات التركيز الذكية متاحة لمشتركي فكرتو برو."
+            features={[
+              'مخطط الإنجاز الأسبوعي وتحليل ساعات الذروة',
+              'توزيع المهام حسب التصنيفات والأولويات',
+              'معدل النجاح ونسب إتمام الأهداف بدقة',
+              'توصيات ذكية لتحسين الإنتاجية اليومية',
+            ]}
+          />
+        ) : analytics ? (
+          <ProductivityAnalyticsView analytics={analytics} />
+        ) : null
+      ) : activeTab === 'streaks' ? (
+        !canAccessStreaks ? (
+          <PaywallLockedCard
+            title="سلسلة الالتزام وعداد الاستمرارية (Streaks)"
+            description="تتبع أيام إنجازك المتتالية وشعلة الالتزام والتحفيز الذاتي للحفاظ على عاداتك اليومية متاح لمشتركي فكرتو برو."
+            features={[
+              'عداد الأيام المتتالية وسلسلة الإنجاز (Streaks)',
+              'تقويم الالتزام الشهري والسنوي التفاعلي',
+              'أوسمة التقدير والإنجازات الشخصية',
+              'تنبيهات الحفاظ على استمرارية العادات',
+            ]}
+          />
+        ) : streakStats ? (
+          <StreakCalendarView stats={streakStats} />
+        ) : null
       ) : null}
     </div>
   )

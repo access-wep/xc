@@ -16,8 +16,46 @@ import {
   Check,
   Globe,
   Sparkles,
+  Lock,
+  Unlock,
+  Sliders,
+  ShieldAlert,
+  Layers,
 } from 'lucide-react'
 import type { SubscriptionPlan, Coupon, Subscription } from '@/types/database'
+
+interface PlanFeatureLimits {
+  max_schedules: number
+  max_tasks_per_day: number
+  habits_enabled: boolean
+  analytics_enabled: boolean
+  streaks_enabled: boolean
+  templates_enabled: boolean
+  export_pdf_enabled: boolean
+  priority_support: boolean
+}
+
+const DEFAULT_FREE_LIMITS: PlanFeatureLimits = {
+  max_schedules: 1,
+  max_tasks_per_day: 10,
+  habits_enabled: false,
+  analytics_enabled: false,
+  streaks_enabled: false,
+  templates_enabled: false,
+  export_pdf_enabled: false,
+  priority_support: false,
+}
+
+const DEFAULT_PRO_LIMITS: PlanFeatureLimits = {
+  max_schedules: 999,
+  max_tasks_per_day: 999,
+  habits_enabled: true,
+  analytics_enabled: true,
+  streaks_enabled: true,
+  templates_enabled: true,
+  export_pdf_enabled: true,
+  priority_support: true,
+}
 
 export default function AdminSubscriptionsManagementPage() {
   const supabase = createClient()
@@ -32,6 +70,12 @@ export default function AdminSubscriptionsManagementPage() {
   const [yearlyPrice, setYearlyPrice] = useState<number>(199)
   const [isUpdatingPlan, setIsUpdatingPlan] = useState(false)
   const [pricingSaveSuccess, setPricingSaveSuccess] = useState(false)
+
+  // Plan Features & Paywall Matrix State
+  const [freeLimits, setFreeLimits] = useState<PlanFeatureLimits>(DEFAULT_FREE_LIMITS)
+  const [proLimits, setProLimits] = useState<PlanFeatureLimits>(DEFAULT_PRO_LIMITS)
+  const [isSavingFeatures, setIsSavingFeatures] = useState(false)
+  const [featuresSaveSuccess, setFeaturesSaveSuccess] = useState(false)
 
   // Coupon Creation State
   const [isCouponModalOpen, setIsCouponModalOpen] = useState(false)
@@ -52,14 +96,27 @@ export default function AdminSubscriptionsManagementPage() {
         setYearlyPrice(Number(plansData[0].price_yearly))
       }
 
-      // 2. Fetch coupons
+      // 2. Fetch plan features from site_settings
+      const { data: featureSettings } = await supabase
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'plan_features')
+        .maybeSingle()
+
+      if (featureSettings?.value) {
+        const val = featureSettings.value as any
+        if (val.free) setFreeLimits({ ...DEFAULT_FREE_LIMITS, ...val.free })
+        if (val.pro) setProLimits({ ...DEFAULT_PRO_LIMITS, ...val.pro })
+      }
+
+      // 3. Fetch coupons
       const { data: couponsData } = await supabase
         .from('coupons')
         .select('*')
         .order('created_at', { ascending: false })
       setCoupons(couponsData || [])
 
-      // 3. Fetch recent subscriptions safely (without postgrest cross-schema join)
+      // 4. Fetch recent subscriptions safely (without postgrest cross-schema join)
       const { data: subsData } = await supabase
         .from('subscriptions')
         .select('*')
@@ -173,6 +230,85 @@ export default function AdminSubscriptionsManagementPage() {
     } finally {
       setIsUpdatingPlan(false)
     }
+  }
+
+  // Save Plan Features & Paywall Matrix
+  const handleSavePlanFeatures = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    setIsSavingFeatures(true)
+    setFeaturesSaveSuccess(false)
+
+    try {
+      const { data: existingSetting } = await supabase
+        .from('site_settings')
+        .select('id')
+        .eq('key', 'plan_features')
+        .maybeSingle()
+
+      const featuresPayload = {
+        free: freeLimits,
+        pro: proLimits,
+        updated_at: new Date().toISOString(),
+      }
+
+      if (existingSetting?.id) {
+        const { error } = await supabase
+          .from('site_settings')
+          .update({
+            value: featuresPayload,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingSetting.id)
+
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('site_settings')
+          .insert({
+            key: 'plan_features',
+            value: featuresPayload,
+            description: 'التحكم في صلاحيات ومميزات الباقة المجانية والاحترافية',
+            updated_at: new Date().toISOString(),
+          })
+
+        if (error) throw error
+      }
+
+      setFeaturesSaveSuccess(true)
+      setTimeout(() => setFeaturesSaveSuccess(false), 4000)
+    } catch (err: any) {
+      console.error('Failed to save plan features:', err)
+      alert(err.message || 'حدث خطأ أثناء حفظ صلاحيات الباقات.')
+    } finally {
+      setIsSavingFeatures(false)
+    }
+  }
+
+  // Quick Presets
+  const applyStrictPreset = () => {
+    setFreeLimits({
+      max_schedules: 1,
+      max_tasks_per_day: 8,
+      habits_enabled: false,
+      analytics_enabled: false,
+      streaks_enabled: false,
+      templates_enabled: false,
+      export_pdf_enabled: false,
+      priority_support: false,
+    })
+  }
+
+  const applyPromotionalPreset = () => {
+    setFreeLimits({
+      max_schedules: 3,
+      max_tasks_per_day: 20,
+      habits_enabled: true,
+      analytics_enabled: false,
+      streaks_enabled: true,
+      templates_enabled: true,
+      export_pdf_enabled: false,
+      priority_support: false,
+    })
   }
 
   // Create Coupon
@@ -322,6 +458,326 @@ export default function AdminSubscriptionsManagementPage() {
             )}
           </div>
         </form>
+      </Card>
+
+      {/* Plan Features & Paywall Control Matrix Card */}
+      <Card className="p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <Sliders className="w-4 h-4" />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                التحكم في مميزات الباقات والقيود (Paywall & Feature Access Matrix)
+              </h3>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              افتح أو اقفل المميزات عن الحسابات المجانية وحدد عدد الجداول والمهام المسموحة. التغييرات تنعكس فوراً على كافة صفحات ومستخدمي المنصة.
+            </p>
+          </div>
+
+          {/* Quick Presets */}
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={applyStrictPreset}
+              className="text-xs"
+              title="إغلاق كل المميزات المتقدمة وحصر المجاني بجدول واحد و 8 مهام"
+            >
+              🔒 الوضع الصارم الافتراضي
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={applyPromotionalPreset}
+              className="text-xs text-indigo-600 dark:text-indigo-400"
+              title="فتح العادات والقوالب لجذب مستخدمين جدد"
+            >
+              🎁 الوضع الترويجي
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Free Tier Limits Column */}
+          <div className="p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/80 space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🆓</span>
+                <span className="font-bold text-sm text-gray-900 dark:text-white">
+                  الباقة المجانية (Free Tier)
+                </span>
+              </div>
+              <Badge variant="outline">الوضع العام للزوار</Badge>
+            </div>
+
+            {/* Numeric Limits */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  أقصى عدد جداول مسموح به
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={freeLimits.max_schedules}
+                  onChange={(e) =>
+                    setFreeLimits({
+                      ...freeLimits,
+                      max_schedules: Math.max(1, Number(e.target.value) || 1),
+                    })
+                  }
+                  className="w-full text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  أقصى عدد مهام باليوم الواحد
+                </label>
+                <input
+                  type="number"
+                  min="3"
+                  max="100"
+                  value={freeLimits.max_tasks_per_day}
+                  onChange={(e) =>
+                    setFreeLimits({
+                      ...freeLimits,
+                      max_tasks_per_day: Math.max(1, Number(e.target.value) || 1),
+                    })
+                  }
+                  className="w-full text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+
+            {/* Feature Toggles */}
+            <div className="space-y-2.5 pt-2">
+              <p className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                التحكم بالوصول للميزات في المجاني:
+              </p>
+
+              {/* Habits */}
+              <label className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 cursor-pointer hover:border-indigo-200 transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">🎯</span>
+                  <div>
+                    <p className="text-xs font-bold text-gray-900 dark:text-white">
+                      متابعة العادات الشهرية (31 يوم)
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      إتاحة شبكة العادات الشهرية للمستخدم المجاني
+                    </p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={freeLimits.habits_enabled}
+                  onChange={(e) =>
+                    setFreeLimits({ ...freeLimits, habits_enabled: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+              </label>
+
+              {/* Analytics */}
+              <label className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 cursor-pointer hover:border-indigo-200 transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">📊</span>
+                  <div>
+                    <p className="text-xs font-bold text-gray-900 dark:text-white">
+                      الإحصائيات والتحليلات المتقدمة
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      الرسوم البيانية ومعدل الإنجاز وساعات التركيز
+                    </p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={freeLimits.analytics_enabled}
+                  onChange={(e) =>
+                    setFreeLimits({ ...freeLimits, analytics_enabled: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+              </label>
+
+              {/* Streaks */}
+              <label className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 cursor-pointer hover:border-indigo-200 transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">🔥</span>
+                  <div>
+                    <p className="text-xs font-bold text-gray-900 dark:text-white">
+                      سلسلة الالتزام وعداد الاستمرارية
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      شعلة الالتزام ومحفز الأيام المتتالية
+                    </p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={freeLimits.streaks_enabled}
+                  onChange={(e) =>
+                    setFreeLimits({ ...freeLimits, streaks_enabled: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+              </label>
+
+              {/* Templates */}
+              <label className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 cursor-pointer hover:border-indigo-200 transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">📑</span>
+                  <div>
+                    <p className="text-xs font-bold text-gray-900 dark:text-white">
+                      معرض القوالب الجاهزة المتقدمة
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      قوالب العمل، الدراسة، الحياة المتوازنة
+                    </p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={freeLimits.templates_enabled}
+                  onChange={(e) =>
+                    setFreeLimits({ ...freeLimits, templates_enabled: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+              </label>
+
+              {/* PDF Export */}
+              <label className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 cursor-pointer hover:border-indigo-200 transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">🖨️</span>
+                  <div>
+                    <p className="text-xs font-bold text-gray-900 dark:text-white">
+                      تصدير وطباعة الجداول PDF
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      تحميل الجداول كملفات جاهزة للطباعة
+                    </p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={freeLimits.export_pdf_enabled}
+                  onChange={(e) =>
+                    setFreeLimits({ ...freeLimits, export_pdf_enabled: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+              </label>
+
+              {/* Direct Support */}
+              <label className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 cursor-pointer hover:border-indigo-200 transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">💬</span>
+                  <div>
+                    <p className="text-xs font-bold text-gray-900 dark:text-white">
+                      أولوية الدعم المباشر عبر واتساب
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      خدمة العملاء الفورية والمساعدة المباشرة
+                    </p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={freeLimits.priority_support}
+                  onChange={(e) =>
+                    setFreeLimits({ ...freeLimits, priority_support: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+              </label>
+            </div>
+          </div>
+
+          {/* Pro Tier Column */}
+          <div className="p-5 rounded-2xl bg-gradient-to-b from-indigo-500/5 to-transparent dark:from-indigo-950/20 dark:to-transparent border border-indigo-200 dark:border-indigo-900/60 space-y-4">
+            <div className="flex items-center justify-between border-b border-indigo-100 dark:border-indigo-900/40 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">💎</span>
+                <span className="font-bold text-sm text-indigo-900 dark:text-indigo-300">
+                  الباقة الاحترافية (Fekrto Pro)
+                </span>
+              </div>
+              <Badge variant="success">كامل الصلاحيات</Badge>
+            </div>
+
+            <div className="p-4 rounded-xl bg-white dark:bg-gray-900 border border-indigo-100 dark:border-indigo-900/50 space-y-2 text-xs">
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>جداول غير محدودة (Unlimited Schedules)</span>
+              </div>
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>مهام يومية غير محدودة لكل يوم</span>
+              </div>
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>الوصول الكامل للعادات الشهرية 31 يوماً</span>
+              </div>
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>رسوم بيانية وتحليلات الأداء المتقدمة</span>
+              </div>
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>عداد الاستمرارية وشعلة الالتزام والتحفيز</span>
+              </div>
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>مكتبة القوالب المتنوعة بنقرة زر واحدة</span>
+              </div>
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>تصدير وطباعة الجداول الاحترافية بصيغة PDF</span>
+              </div>
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>أولوية الدعم الفني المباشر عبر واتساب</span>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-[11px] text-amber-800 dark:text-amber-300 space-y-1">
+              <p className="font-bold">ملاحظة أمان:</p>
+              <p>
+                أي ميزة تقوم بتعطيلها في الباقة المجانية ستُقفل تلقائياً للمستخدمين المجانيين وتظهر لهم شاشة الترقية إلى باقة برو (Paywall Locked Screen).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Save Features Actions */}
+        <div className="flex items-center gap-3 pt-6 border-t border-gray-100 dark:border-gray-800 mt-6">
+          <Button
+            type="button"
+            variant="primary"
+            isLoading={isSavingFeatures}
+            onClick={() => handleSavePlanFeatures()}
+            className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            <Save className="w-4 h-4" />
+            <span>حفظ مصفوفة الصلاحيات وتطبيقها فوراً</span>
+          </Button>
+
+          {featuresSaveSuccess && (
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+              <Check className="w-4 h-4" />
+              <span>تم حفظ وتحديث قيود الباقات بنجاح في قاعدة البيانات!</span>
+            </span>
+          )}
+        </div>
       </Card>
 
       {/* Coupons Management Card */}

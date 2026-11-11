@@ -3,12 +3,15 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePlanFeatures } from '@/hooks/usePlanFeatures'
+import { PaywallLockedCard } from '@/components/dashboard/PaywallLockedCard'
 import { createClient } from '@/lib/supabase/client'
 import { TemplatesGallery } from '@/components/dashboard/TemplatesGallery'
 import { Layers, CheckCircle2, ArrowRight } from 'lucide-react'
 
 export default function TemplatesPage() {
   const { user } = useAuth()
+  const { canAccessTemplates, isLoading: isPlanLoading } = usePlanFeatures()
   const router = useRouter()
   const supabase = createClient()
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -141,6 +144,34 @@ export default function TemplatesPage() {
       console.error('Error applying template:', err)
       alert('حدث خطأ أثناء تطبيق القالب، يرجى المحاولة ثانية.')
     }
+  }
+
+  // Paywall check for templates
+  if (!isPlanLoading && !canAccessTemplates) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+            <Layers className="w-6 h-6 text-indigo-500" />
+            <span>معرض القوالب الجاهزة</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            اختر قالباً جاهزاً ومدروساً لبدء أسبوعك بإنتاجية عالية دون إضاعة الوقت في التخطيط اليدوي
+          </p>
+        </div>
+
+        <PaywallLockedCard
+          title="معرض القوالب الإنتاجية الجاهزة"
+          description="مكتبة القوالب المصممة خصيصاً للعمل والدراسة ونمط الحياة المتوازن بنقرة زر واحدة متاحة لمشتركي فكرتو برو."
+          features={[
+            'قالب العمل والإنتاجية العالية',
+            'قالب الدراسة والتحصيل والامتحانات',
+            'قالب الحياة المتوازنة والعادات الإيجابية',
+            'إنشاء وتخصيص قوالب متقدمة خاصة بك',
+          ]}
+        />
+      </div>
+    )
   }
 
   return (

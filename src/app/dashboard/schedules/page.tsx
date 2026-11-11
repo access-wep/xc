@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePlanFeatures } from '@/hooks/usePlanFeatures'
 import { createClient } from '@/lib/supabase/client'
 import { Button, Input, Card, Modal, Select, Textarea, Badge } from '@/components/ui'
 import {
@@ -17,6 +18,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Sparkles,
+  Lock,
 } from 'lucide-react'
 import type { Schedule, ScheduleType } from '@/types/database'
 
@@ -24,10 +26,12 @@ function SchedulesContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuth()
+  const { isPro, maxSchedules } = usePlanFeatures()
   const supabase = createClient()
 
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [showLimitModal, setShowLimitModal] = useState(false)
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -194,9 +198,23 @@ function SchedulesContent() {
     }
   }
 
+  // Open Create Modal with Limit Check
+  const handleOpenCreateModal = () => {
+    if (!isPro && schedules.length >= maxSchedules) {
+      setShowLimitModal(true)
+      return
+    }
+    resetForm()
+    setIsCreateModalOpen(true)
+  }
+
   // Clone / Duplicate Schedule
   const handleDuplicate = async (schedule: Schedule) => {
     if (!user) return
+    if (!isPro && schedules.length >= maxSchedules) {
+      setShowLimitModal(true)
+      return
+    }
     try {
       // 1. Create cloned schedule
       const { data: cloned, error: cloneError } = await supabase
@@ -303,10 +321,7 @@ function SchedulesContent() {
         </div>
 
         <Button
-          onClick={() => {
-            resetForm()
-            setIsCreateModalOpen(true)
-          }}
+          onClick={handleOpenCreateModal}
           variant="primary"
           className="gap-2 self-start sm:self-auto"
         >
@@ -314,6 +329,25 @@ function SchedulesContent() {
           <span>إنشاء جدول جديد</span>
         </Button>
       </div>
+
+      {/* Free Plan Schedule Limit Banner */}
+      {!isPro && (
+        <div className="p-3.5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+            <span className="text-gray-700 dark:text-gray-300">
+              أنت تستخدم الباقة المجانية: قمت بإنشاء <strong>{schedules.length}</strong> من أصل <strong>{maxSchedules}</strong> جدول مسموح به.
+            </span>
+          </div>
+          <Link
+            href="/dashboard/subscription"
+            className="inline-flex items-center gap-1 font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+          >
+            <span>ترقية إلى برو لجداول غير محدودة</span>
+            <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
+          </Link>
+        </div>
+      )}
 
       {/* Schedules Grid */}
       {isLoading ? (
@@ -330,10 +364,7 @@ function SchedulesContent() {
             الجداول تساعدك في رسم خارطة زمنية دقيقة لمهامك وتوزيعها على الأيام بمرونة وسهولة.
           </p>
           <Button
-            onClick={() => {
-              resetForm()
-              setIsCreateModalOpen(true)
-            }}
+            onClick={handleOpenCreateModal}
             variant="primary"
           >
             إنشاء أول جدول الآن
@@ -512,6 +543,55 @@ function SchedulesContent() {
           <Button variant="danger" onClick={handleDelete}>
             تأكيد الحذف
           </Button>
+        </div>
+      </Modal>
+
+      {/* Schedule Limit Paywall Modal */}
+      <Modal
+        isOpen={showLimitModal}
+        onClose={() => setShowLimitModal(false)}
+        title="بلغت الحد الأقصى للجداول في الباقة المجانية"
+      >
+        <div className="space-y-4 text-center py-2">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto">
+            <Lock className="w-7 h-7" />
+          </div>
+
+          <div>
+            <h4 className="text-base font-bold text-gray-900 dark:text-white">
+              حد الباقة المجانية: {maxSchedules} جدول فقط
+            </h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto leading-relaxed">
+              لقد قمت بإنشاء {schedules.length} من أصل {maxSchedules} جدول مسموح به. للتمتع بإنشاء عدد غير محدود من الجداول ومتابعة العادات الشهرية والتحليلات، اشترك الآن في باقة فكرتو برو.
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-800 text-start text-xs space-y-2 border border-gray-100 dark:border-gray-700">
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-semibold">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>جداول غير محدودة دون قيود</span>
+            </div>
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-semibold">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>متابعة العادات الشهرية وسلسلة الالتزام</span>
+            </div>
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-semibold">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>تصدير وطباعة الجداول PDF</span>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowLimitModal(false)}>
+              إلغاء
+            </Button>
+            <Link href="/dashboard/subscription">
+              <Button variant="primary" className="gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600">
+                <Sparkles className="w-4 h-4" />
+                <span>الترقية إلى فكرتو برو الآن</span>
+              </Button>
+            </Link>
+          </div>
         </div>
       </Modal>
     </div>
