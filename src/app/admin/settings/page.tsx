@@ -10,6 +10,11 @@ import {
   Trash2,
   Edit2,
   CheckCircle2,
+  MessageCircle,
+  Headphones,
+  ExternalLink,
+  ShieldCheck,
+  Save,
 } from 'lucide-react'
 import type { PaymentMethod } from '@/types/database'
 
@@ -23,6 +28,13 @@ export default function AdminSettingsPage() {
   const [contactPhone, setContactPhone] = useState('+966500000000')
   const [currency, setCurrency] = useState('ر.س')
   const [isSavingSiteInfo, setIsSavingSiteInfo] = useState(false)
+
+  // WhatsApp Technical Support State
+  const [whatsappNumber, setWhatsappNumber] = useState('+966500000000')
+  const [whatsappMessage, setWhatsappMessage] = useState('مرحباً، أود الاستفسار وطلب الدعم الفني بخصوص منصة فكرتو')
+  const [whatsappEnabled, setWhatsappEnabled] = useState(true)
+  const [isSavingWhatsApp, setIsSavingWhatsApp] = useState(false)
+  const [whatsappSaveSuccess, setWhatsappSaveSuccess] = useState(false)
 
   // Payment Methods State
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
@@ -50,6 +62,13 @@ export default function AdminSettingsPage() {
         setSupportEmail(val.contact_email || 'support@fekrto.com')
         setContactPhone(val.contact_phone || '+966500000000')
         setCurrency(val.currency || 'ر.س')
+
+        // WhatsApp settings
+        setWhatsappNumber(val.whatsapp_number || val.contact_phone || '+966500000000')
+        setWhatsappMessage(
+          val.whatsapp_message || 'مرحباً، أود الاستفسار وطلب الدعم الفني بخصوص منصة فكرتو'
+        )
+        setWhatsappEnabled(val.whatsapp_enabled !== false)
       }
 
       // 2. Load payment methods
@@ -68,7 +87,7 @@ export default function AdminSettingsPage() {
     loadSettingsAndMethods()
   }, [])
 
-  // Save Site Info
+  // Save General Site Info
   const handleSaveSiteInfo = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSavingSiteInfo(true)
@@ -83,16 +102,65 @@ export default function AdminSettingsPage() {
             contact_email: supportEmail,
             contact_phone: contactPhone,
             currency,
+            whatsapp_number: whatsappNumber,
+            whatsapp_message: whatsappMessage,
+            whatsapp_enabled: whatsappEnabled,
           },
           updated_at: new Date().toISOString(),
         })
 
       if (error) throw error
-      alert('تم حفظ إعدادات الموقع بنجاح!')
+      alert('تم حفظ إعدادات الموقع العامة بنجاح!')
     } catch (err: any) {
       alert(err.message || 'حدث خطأ أثناء حفظ الإعدادات.')
     } finally {
       setIsSavingSiteInfo(false)
+    }
+  }
+
+  // Save WhatsApp Support Config Dedicated Handler
+  const handleSaveWhatsAppConfig = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSavingWhatsApp(true)
+    setWhatsappSaveSuccess(false)
+    try {
+      // First fetch current settings to avoid overwriting other keys
+      const { data: currentSettings } = await supabase
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'site_info')
+        .single()
+
+      const currentVal = (currentSettings?.value as any) || {}
+
+      const updatedVal = {
+        ...currentVal,
+        site_name: siteName,
+        site_name_en: siteNameEn,
+        contact_email: supportEmail,
+        contact_phone: contactPhone,
+        currency,
+        whatsapp_number: whatsappNumber.trim(),
+        whatsapp_message: whatsappMessage.trim(),
+        whatsapp_enabled: whatsappEnabled,
+      }
+
+      const { error } = await supabase
+        .from('site_settings')
+        .upsert({
+          key: 'site_info',
+          value: updatedVal,
+          updated_at: new Date().toISOString(),
+        })
+
+      if (error) throw error
+
+      setWhatsappSaveSuccess(true)
+      setTimeout(() => setWhatsappSaveSuccess(false), 4000)
+    } catch (err: any) {
+      alert(err.message || 'تعذر حفظ إعدادات الواتساب.')
+    } finally {
+      setIsSavingWhatsApp(false)
     }
   }
 
@@ -185,20 +253,130 @@ export default function AdminSettingsPage() {
     }
   }
 
+  // Clean WhatsApp phone number for preview link
+  const cleanPhoneForPreview = whatsappNumber.replace(/[^0-9]/g, '')
+  const previewWhatsAppUrl = `https://wa.me/${cleanPhoneForPreview}?text=${encodeURIComponent(
+    whatsappMessage
+  )}`
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <Settings className="w-6 h-6 text-amber-500" />
-          <span>إعدادات الموقع وطرق التحويل والدفع</span>
+          <span>إعدادات الموقع، الدعم الفني عبر واتساب، وطرق الدفع</span>
         </h1>
         <p className="text-xs text-gray-500 mt-1">
-          تعديل البيانات الأساسية، البريد، الحسابات البنكية، والمحافظ الرقمية المعتمدة
+          التحكم الكامل في رقم واتساب الدعم الفني، بيانات المنصة، والحسابات البنكية المعتمدة
         </p>
       </div>
 
-      {/* General Settings */}
+      {/* 1. WhatsApp Customer Support Dedicated Section */}
+      <Card className="p-6 border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#25D366] text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <Headphones className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <span>خدمة الدعم الفني عبر واتساب (WhatsApp Support)</span>
+                <Badge variant={whatsappEnabled ? 'success' : 'danger'}>
+                  {whatsappEnabled ? 'الخدمة مفعّلة في الموقع' : 'الخدمة معطّلة'}
+                </Badge>
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                تحديد رقم الواتساب الذي يتواصل عليه العملاء للمساعدة وحل مشكلات الدفع والاشتراكات
+              </p>
+            </div>
+          </div>
+
+          {/* Test Link Button */}
+          {cleanPhoneForPreview && (
+            <a
+              href={previewWhatsAppUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/40 hover:bg-emerald-200/70 border border-emerald-300/40 transition-colors shadow-sm self-start sm:self-auto"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>تجربة فتح المحادثة الآن</span>
+            </a>
+          )}
+        </div>
+
+        <form onSubmit={handleSaveWhatsAppConfig} className="space-y-4 max-w-3xl">
+          {/* Enable / Disable Toggle */}
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+            <div>
+              <p className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                إظهار زر واتساب العائم في صفحات الموقع
+              </p>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                عند تفعيله، سيظهر زر عائم للعملاء في أسفل الشاشة للتواصل المباشر مع الدعم
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={whatsappEnabled}
+                onChange={(e) => setWhatsappEnabled(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#25D366]" />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Input
+                label="رقم واتساب الدعم الفني *"
+                value={whatsappNumber}
+                onChange={(e) => setWhatsappNumber(e.target.value)}
+                placeholder="مثال: +966500000000 أو 201000000000"
+                required
+              />
+              <p className="text-[10px] text-gray-400 ps-1">
+                اكتب الرقم متضمناً كود الدولة الدولي (مثال: 966 للسعودية، 20 لمصر، 971 للإمارات).
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <Input
+                label="الرسالة الافتراضية للمحادثة"
+                value={whatsappMessage}
+                onChange={(e) => setWhatsappMessage(e.target.value)}
+                placeholder="مثال: مرحباً، أود الاستفسار بخصوص منصة فكرتو"
+              />
+              <p className="text-[10px] text-gray-400 ps-1">
+                الرسالة التي ستظهر مسبقاً في مربع كتابة واتساب عند ضغط العميل على الزر.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={isSavingWhatsApp}
+              className="bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold gap-2"
+            >
+              <Save className="w-4 h-4" />
+              <span>حفظ إعدادات واتساب الدعم الفني</span>
+            </Button>
+
+            {whatsappSaveSuccess && (
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 animate-in fade-in duration-200">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>تم حفظ إعدادات الواتساب بنجاح، وستنعكس فوراً على الموقع!</span>
+              </span>
+            )}
+          </div>
+        </form>
+      </Card>
+
+      {/* 2. General Settings */}
       <Card className="p-6">
         <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4">
           البيانات العامة للمنصة
@@ -225,7 +403,7 @@ export default function AdminSettingsPage() {
               onChange={(e) => setSupportEmail(e.target.value)}
             />
             <Input
-              label="رقم التواصل واتساب / هاتف"
+              label="رقم الهاتف العام"
               value={contactPhone}
               onChange={(e) => setContactPhone(e.target.value)}
             />
@@ -239,7 +417,7 @@ export default function AdminSettingsPage() {
         </form>
       </Card>
 
-      {/* Payment Methods Management */}
+      {/* 3. Payment Methods Management */}
       <Card className="p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>

@@ -12,6 +12,8 @@ import {
   Clock,
   AlertCircle,
   Filter,
+  RefreshCw,
+  ExternalLink,
 } from 'lucide-react'
 import type { PaymentRequest } from '@/types/database'
 
@@ -29,28 +31,70 @@ export default function AdminPaymentsPage() {
   const [adminNote, setAdminNote] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
 
-  // Load All Payment Requests with User Profile details
+  // Load All Payment Requests with User Profile details safely
   const loadPaymentRequests = async () => {
     setIsLoading(true)
     try {
       let query = supabase
         .from('payment_requests')
-        .select(`
-          *,
-          profiles:user_id(full_name, email, phone),
-          payment_methods:payment_method_id(name_ar)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (filterStatus !== 'all') {
         query = query.eq('status', filterStatus)
       }
 
-      const { data, error } = await query
-      if (error) throw error
-      setRequests(data || [])
+      const { data: rawRequests, error: reqError } = await query
+      if (reqError) {
+        console.error('Error fetching raw payment requests:', reqError)
+        throw reqError
+      }
+
+      if (!rawRequests || rawRequests.length === 0) {
+        setRequests([])
+        return
+      }
+
+      // Safely collect foreign keys for manual hydration
+      const userIds = Array.from(new Set(rawRequests.map((r: any) => r.user_id).filter(Boolean)))
+      const methodIds = Array.from(new Set(rawRequests.map((r: any) => r.payment_method_id).filter(Boolean)))
+      const planIds = Array.from(new Set(rawRequests.map((r: any) => r.plan_id).filter(Boolean)))
+
+      const [profilesRes, methodsRes, plansRes] = await Promise.all([
+        userIds.length > 0
+          ? supabase.from('profiles').select('id, full_name, email, phone').in('id', userIds)
+          : Promise.resolve({ data: [] }),
+        methodIds.length > 0
+          ? supabase.from('payment_methods').select('id, name_ar, name_en').in('id', methodIds)
+          : Promise.resolve({ data: [] }),
+        planIds.length > 0
+          ? supabase.from('subscription_plans').select('id, name_ar, name_en').in('id', planIds)
+          : Promise.resolve({ data: [] }),
+      ])
+
+      const profilesMap = new Map((profilesRes.data || []).map((p: any) => [p.id, p]))
+      const methodsMap = new Map((methodsRes.data || []).map((m: any) => [m.id, m]))
+      const plansMap = new Map((plansRes.data || []).map((pl: any) => [pl.id, pl]))
+
+      const enriched = rawRequests.map((r: any) => ({
+        ...r,
+        profiles: profilesMap.get(r.user_id) || {
+          full_name: 'مستخدم مسجل',
+          email: 'غير متوفر',
+          phone: '',
+        },
+        payment_methods: methodsMap.get(r.payment_method_id) || {
+          name_ar: 'تحويل بنكي / يدوي',
+        },
+        subscription_plans: plansMap.get(r.plan_id) || {
+          name_ar: r.is_yearly ? 'الاشتراك السنوي' : 'الاشتراك الشهري',
+        },
+      }))
+
+      setRequests(enriched)
     } catch (err) {
       console.error('Error fetching payments:', err)
+      setRequests([])
     } finally {
       setIsLoading(false)
     }
@@ -186,27 +230,40 @@ export default function AdminPaymentsPage() {
           </p>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-700 text-xs">
-          {['all', 'pending', 'approved', 'rejected'].map((s) => (
-            <button
-              key={s}
-              onClick={() => setFilterStatus(s)}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
-                filterStatus === s
-                  ? 'bg-amber-500 text-gray-950 font-bold'
-                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
-              }`}
-            >
-              {s === 'all'
-                ? 'الكل'
-                : s === 'pending'
-                ? 'معلقة'
-                : s === 'approved'
-                ? 'معتمدة'
-                : 'مرفوضة'}
-            </button>
-          ))}
+        {/* Actions & Filter Pills */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadPaymentRequests}
+            isLoading={isLoading}
+            className="text-xs"
+          >
+            <RefreshCw className="w-3.5 h-3.5 ms-1" />
+            <span>تحديث</span>
+          </Button>
+
+          <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-700 text-xs">
+            {['all', 'pending', 'approved', 'rejected'].map((s) => (
+              <button
+                key={s}
+                onClick={() => setFilterStatus(s)}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                  filterStatus === s
+                    ? 'bg-amber-500 text-gray-950 font-bold'
+                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                {s === 'all'
+                  ? 'الكل'
+                  : s === 'pending'
+                  ? 'معلقة'
+                  : s === 'approved'
+                  ? 'معتمدة'
+                  : 'مرفوضة'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -243,14 +300,19 @@ export default function AdminPaymentsPage() {
                       <p className="text-[11px] text-gray-400">
                         {req.profiles?.email}
                       </p>
+                      {req.profiles?.phone && (
+                        <p className="text-[10px] text-gray-400 font-mono">
+                          {req.profiles.phone}
+                        </p>
+                      )}
                     </td>
 
                     <td className="py-3.5 px-4">
                       <span className="font-bold text-gray-900 dark:text-white">
-                        {req.amount} ر.س
+                        {req.amount} {req.currency || 'ر.س'}
                       </span>
                       <span className="text-[10px] text-gray-400 block">
-                        {req.is_yearly ? 'اشتراك سنوي' : 'اشتراك شهري'}
+                        {req.subscription_plans?.name_ar || (req.is_yearly ? 'اشتراك سنوي' : 'اشتراك شهري')}
                       </span>
                     </td>
 
@@ -332,9 +394,22 @@ export default function AdminPaymentsPage() {
 
             {/* Proof Image Box */}
             <div>
-              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">
-                صورة إيصال التحويل البنكي المرفق:
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  صورة إيصال التحويل البنكي المرفق:
+                </label>
+                {selectedRequest.proof_url && (
+                  <a
+                    href={selectedRequest.proof_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1 font-medium"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>فتح الصورة الأصلية في نافذة جديدة</span>
+                  </a>
+                )}
+              </div>
               {selectedRequest.proof_url ? (
                 <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden max-h-72 flex items-center justify-center bg-gray-900/10">
                   <img

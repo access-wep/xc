@@ -91,7 +91,7 @@ export default function SubscriptionPage() {
         setSelectedMethod(methodsData[0])
       }
 
-      // 3. Fetch User Active Subscription
+      // 3. Fetch User Active Subscription (Safe limit 1)
       const { data: subData } = await supabase
         .from('subscriptions')
         .select('*')
@@ -99,9 +99,8 @@ export default function SubscriptionPage() {
         .eq('status', 'active')
         .order('end_date', { ascending: false })
         .limit(1)
-        .single()
 
-      setActiveSubscription(subData || null)
+      setActiveSubscription(subData && subData.length > 0 ? subData[0] : null)
 
       // 4. Fetch User Payment Requests
       const { data: requestsData } = await supabase
@@ -204,7 +203,7 @@ export default function SubscriptionPage() {
       }
 
       // 2. Insert into payment_requests table with 'pending' status
-      const { error: requestError } = await supabase
+      const { data: newPaymentReq, error: requestError } = await supabase
         .from('payment_requests')
         .insert({
           user_id: user.id,
@@ -213,15 +212,20 @@ export default function SubscriptionPage() {
           coupon_id: appliedCoupon?.id || null,
           payment_method_id: selectedMethod.id,
           amount: finalPrice,
-          currency: 'SAR',
+          currency: currentCountry.currencySymbol || 'SAR',
           proof_url: proofUrl,
           status: 'pending',
         })
+        .select()
+        .single()
 
       if (requestError) throw requestError
 
       setSubmissionSuccess(true)
-      loadSubscriptionData()
+      if (newPaymentReq) {
+        setPaymentRequests((prev) => [newPaymentReq, ...prev])
+      }
+      await loadSubscriptionData()
     } catch (err: any) {
       setPaymentError(err.message || 'حدث خطأ أثناء إرسال طلب الدفع.')
     } finally {
@@ -430,7 +434,7 @@ export default function SubscriptionPage() {
                     </Badge>
                   </div>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    المبلغ: {req.amount} ر.س | التاريخ:{' '}
+                    المبلغ: {req.amount} {req.currency || 'ر.س'} | التاريخ:{' '}
                     {new Date(req.created_at).toLocaleDateString('ar-SA')}
                   </p>
                   {req.rejection_reason && (

@@ -3,6 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
+import { WhatsAppSupportButton } from "@/components/WhatsAppSupportButton";
 
 export const metadata: Metadata = {
   title: {
@@ -60,7 +61,10 @@ export default function RootLayout({
       <body className="min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans">
         <ThemeProvider>
           <CurrencyProvider>
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              {children}
+              <WhatsAppSupportButton />
+            </AuthProvider>
           </CurrencyProvider>
         </ThemeProvider>
       </body>
