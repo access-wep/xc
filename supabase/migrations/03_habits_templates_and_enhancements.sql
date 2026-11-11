@@ -1,6 +1,6 @@
 -- Migration: 03_habits_templates_and_enhancements.sql
 -- Fekrto (فكرتو) Platform: Habits, Templates & Task Category Enhancements
-
+ 
 -- 1. Extend Tasks table safely with category_id and color
 alter table public.tasks 
   add column if not exists category_id uuid references public.task_categories(id) on delete set null,
