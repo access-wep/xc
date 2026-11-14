@@ -4,7 +4,12 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
-import { Card, Button, ProgressBar, Badge } from '@/components/ui'
+import { Button, ProgressBar, Badge } from '@/components/ui'
+import {
+  SpatialCard,
+  InteractiveEnergyCore,
+  SpatialProgressRing,
+} from '@/components/ui'
 import {
   CalendarCheck,
   CheckCircle2,
@@ -18,6 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarDays,
+  Sparkles,
 } from 'lucide-react'
 import type { Task, Schedule, ScheduleDay } from '@/types/database'
 
@@ -59,7 +65,6 @@ export default function DashboardOverviewPage() {
       setActiveSchedules(schedules || [])
 
       // 2. Fetch tasks for selectedDate
-      // First get schedule_days for this date
       const { data: days } = await supabase
         .from('schedule_days')
         .select('id, schedule_id')
@@ -104,7 +109,7 @@ export default function DashboardOverviewPage() {
         setUpcomingTasks([])
       }
     } catch (err) {
-      console.error('Error loading dashboard data:', err)
+      console.error('Failed to load dashboard overview data:', err)
     } finally {
       setIsLoading(false)
     }
@@ -139,7 +144,7 @@ export default function DashboardOverviewPage() {
         .eq('id', task.id)
     } catch (err) {
       console.error('Failed to update task:', err)
-      loadDashboardData() // Revert on failure
+      loadDashboardData()
     }
   }
 
@@ -154,135 +159,159 @@ export default function DashboardOverviewPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Welcome Banner */}
-      <div className="relative rounded-3xl bg-gradient-to-l from-indigo-600 via-indigo-700 to-purple-700 p-6 sm:p-8 text-white shadow-xl shadow-indigo-500/20 overflow-hidden">
-        {/* Background glow & shapes */}
-        <div className="absolute top-0 end-0 -mt-8 -me-8 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute bottom-0 start-0 -mb-8 -ms-8 w-48 h-48 bg-purple-500/20 rounded-full blur-xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-xs font-medium text-indigo-100 mb-3 backdrop-blur-sm">
-              <Flame className="w-3.5 h-3.5 text-amber-300" />
-              <span>معدل الالتزام: 5 أيام متتالية 🔥</span>
+      {/* 1. Spatial 3D Welcome Banner & Central Energy Core */}
+      <SpatialCard
+        neonGlow="indigo"
+        tiltEnabled={false}
+        className="p-6 sm:p-8 bg-gradient-to-l from-indigo-950/70 via-slate-900/90 to-slate-950/90 border-white/10"
+      >
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+          {/* Welcome Text & CTA */}
+          <div className="flex-1 text-right space-y-3">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-indigo-300 backdrop-blur-md shadow-inner">
+              <Flame className="w-4 h-4 text-amber-400 fill-amber-400 animate-pulse" />
+              <span>مؤشر الاستمرارية: 5 أيام متتالية متوهجة 🔥</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+
+            <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight font-cairo">
               مرحبًا، {profile?.full_name || 'صديقنا المبدع'} 👋
             </h1>
-            <p className="mt-2 text-indigo-100 text-sm sm:text-base max-w-xl">
+
+            <p className="text-gray-300 text-sm sm:text-base max-w-xl leading-relaxed">
               {totalTasks === 0
-                ? 'ليس لديك مهام مسجلة لهذا اليوم. ابدأ بإضافة مهامك وتنظيم جدولك لتحقيق أقصى إنتاجية!'
-                : `لديك اليوم ${totalTasks} مهام، قمت بإنجاز ${completedTasks} منها حتى الآن. استمر بالتقدم!`}
+                ? 'ليس لديك مهام مجدولة لهذا التاريخ. ابدأ بإضافة مهامك اليومية وشحن نواة طاقتك لتحقيق إنتاجية استثنائية!'
+                : `لديك اليوم ${totalTasks} مهام، قمت بإنجاز ${completedTasks} منها حتى الآن. نواة طاقتك تتفاعل لحظياً مع كل مهمة تكملها!`}
             </p>
+
+            <div className="pt-2 flex flex-wrap items-center gap-3">
+              <Link
+                href="/dashboard/today"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-teal-500 text-white font-bold text-sm shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-95 transition-all"
+              >
+                <CalendarCheck className="w-4 h-4" />
+                <span>الجدول اليومي التفصيلي</span>
+              </Link>
+
+              <Link
+                href="/dashboard/schedules?create=true"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 text-sm font-semibold transition-all hover:scale-[1.02] active:scale-95"
+              >
+                <Plus className="w-4 h-4 text-indigo-400" />
+                <span>إنشاء جدول جديد</span>
+              </Link>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <Link
-              href="/dashboard/today"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-indigo-600 font-semibold text-sm hover:bg-indigo-50 transition-all shadow-md active:scale-95"
-            >
-              <CalendarCheck className="w-4 h-4" />
-              <span>جدول اليوم التفصيلي</span>
-            </Link>
+          {/* Interactive 3D WebGL Energy Core */}
+          <div className="flex-shrink-0 flex flex-col items-center justify-center">
+            <InteractiveEnergyCore
+              completionRate={completionPercentage}
+              streakDays={5}
+              size={210}
+            />
           </div>
         </div>
-      </div>
+      </SpatialCard>
 
-      {/* Stats Grid */}
+      {/* 2. Bento Grid: 4 Spatial 3D Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* Total Tasks */}
-        <Card className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0">
-            <ListTodo className="w-6 h-6" />
+        <SpatialCard
+          neonGlow="indigo"
+          tiltEnabled={true}
+          popZ={24}
+          className="p-5 flex items-center gap-4"
+        >
+          <div className="w-13 h-13 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+            <ListTodo className="w-6 h-6 stroke-[2.2]" />
           </div>
           <div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-              إجمالي المهام
-            </p>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">
+            <p className="text-xs text-gray-400 font-medium">إجمالي المهام</p>
+            <h3 className="text-2xl sm:text-3xl font-black text-white mt-0.5 font-cairo">
               {totalTasks}
             </h3>
           </div>
-        </Card>
+        </SpatialCard>
 
         {/* Completed */}
-        <Card className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
-            <CheckCircle2 className="w-6 h-6" />
+        <SpatialCard
+          neonGlow="emerald"
+          tiltEnabled={true}
+          popZ={24}
+          className="p-5 flex items-center gap-4"
+        >
+          <div className="w-13 h-13 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+            <CheckCircle2 className="w-6 h-6 stroke-[2.2]" />
           </div>
           <div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-              المهام المنجزة
-            </p>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">
+            <p className="text-xs text-gray-400 font-medium">المهام المنجزة</p>
+            <h3 className="text-2xl sm:text-3xl font-black text-emerald-400 mt-0.5 font-cairo">
               {completedTasks}
             </h3>
           </div>
-        </Card>
+        </SpatialCard>
 
         {/* Remaining */}
-        <Card className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0">
-            <Clock className="w-6 h-6" />
+        <SpatialCard
+          neonGlow="cyan"
+          tiltEnabled={true}
+          popZ={24}
+          className="p-5 flex items-center gap-4"
+        >
+          <div className="w-13 h-13 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(34,211,238,0.2)]">
+            <Clock className="w-6 h-6 stroke-[2.2]" />
           </div>
           <div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-              المهام المتبقية
-            </p>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">
+            <p className="text-xs text-gray-400 font-medium">المهام المتبقية</p>
+            <h3 className="text-2xl sm:text-3xl font-black text-cyan-400 mt-0.5 font-cairo">
               {remainingTasks}
             </h3>
           </div>
-        </Card>
+        </SpatialCard>
 
-        {/* Completion Percentage */}
-        <Card className="p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center flex-shrink-0">
-            <TrendingUp className="w-6 h-6" />
-          </div>
-          <div className="flex-1">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-              نسبة الإنجاز
-            </p>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">
+        {/* Completion Percentage with 3D Ring */}
+        <SpatialCard
+          neonGlow="amber"
+          tiltEnabled={true}
+          popZ={24}
+          className="p-5 flex items-center justify-between gap-3"
+        >
+          <div>
+            <p className="text-xs text-gray-400 font-medium">نسبة الإنجاز</p>
+            <h3 className="text-2xl sm:text-3xl font-black text-white mt-0.5 font-cairo">
               {completionPercentage}%
             </h3>
           </div>
-        </Card>
+          <SpatialProgressRing
+            percentage={completionPercentage}
+            size={58}
+            strokeWidth={5}
+            glowColor="emerald"
+          />
+        </SpatialCard>
       </div>
 
-      {/* Progress Bar Row */}
-      {totalTasks > 0 && (
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-semibold text-gray-900 dark:text-white">
-              مستوى إنجاز مهام اليوم
-            </span>
-            <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
-              {completedTasks} من {totalTasks} مهام مكتملة
-            </span>
-          </div>
-          <ProgressBar value={completedTasks} max={totalTasks} size="lg" />
-        </Card>
-      )}
-
-      {/* Main Content Layout: Tasks + Calendar / Schedules */}
+      {/* 3. Main Content Bento Grid: Tasks + Calendar / Schedules */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left 2 Cols: Selected Day Tasks */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="p-6">
+          <SpatialCard
+            neonGlow="none"
+            tiltEnabled={false}
+            className="p-6"
+          >
             {/* Header & Date Switcher */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
               <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2 font-cairo">
                   <span>مهام اليوم</span>
                   {isTodayDate && (
                     <Badge variant="success" size="sm">
-                      اليوم
+                      اليوم الحالي
                     </Badge>
                   )}
                 </h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs text-gray-400 mt-1">
                   {new Date(selectedDate).toLocaleDateString('ar-SA', {
                     weekday: 'long',
                     year: 'numeric',
@@ -296,7 +325,7 @@ export default function DashboardOverviewPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => changeDate(-1)}
-                  className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  className="p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 transition-colors"
                   title="اليوم السابق"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -305,13 +334,13 @@ export default function DashboardOverviewPage() {
                   onClick={() =>
                     setSelectedDate(new Date().toISOString().split('T')[0])
                   }
-                  className="px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  className="px-3.5 py-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-semibold text-gray-200 transition-colors"
                 >
                   اليوم الحالي
                 </button>
                 <button
                   onClick={() => changeDate(1)}
-                  className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  className="p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 transition-colors"
                   title="اليوم التالي"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -319,25 +348,31 @@ export default function DashboardOverviewPage() {
               </div>
             </div>
 
-            {/* Tasks List */}
-            <div className="mt-4 space-y-3">
+            {/* Tasks List / Holographic Empty State */}
+            <div className="mt-5 space-y-3">
               {todayTasks.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 flex items-center justify-center mx-auto mb-3">
-                    <ListTodo className="w-6 h-6" />
+                /* Holographic Empty State */
+                <div className="relative p-10 text-center rounded-3xl border border-dashed border-white/15 bg-white/[0.02] overflow-hidden my-4">
+                  {/* Subtle Glow backdrop */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                  <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto mb-4 shadow-[0_0_25px_rgba(99,102,241,0.25)]">
+                    <Sparkles className="w-8 h-8 animate-pulse" />
                   </div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+
+                  <h4 className="text-base font-bold text-white mb-1 font-cairo">
                     لا توجد مهام مسجلة لهذا التاريخ
+                  </h4>
+                  <p className="text-xs text-gray-400 max-w-sm mx-auto mb-6 leading-relaxed">
+                    ابدأ يومك بتحديد أهدافك ومهامك اليومية، وراقب نواة طاقتك وهي تتوهج مع كل إنجاز تحققه.
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    أضف مهام جديدة لجدولك لتظهر هنا وتتابع إنجازها لحظة بلحظة.
-                  </p>
+
                   <Link
                     href="/dashboard/today"
-                    className="inline-flex items-center gap-1.5 mt-4 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-teal-500 text-white text-xs font-bold shadow-lg shadow-indigo-500/20 hover:scale-105 active:scale-95 transition-all"
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>إضافة مهمة الآن</span>
+                    <Plus className="w-4 h-4" />
+                    <span>إضافة أول مهمة لليوم</span>
                   </Link>
                 </div>
               ) : (
@@ -345,23 +380,23 @@ export default function DashboardOverviewPage() {
                   <div
                     key={task.id}
                     onClick={() => toggleTask(task)}
-                    className={`flex items-start gap-3.5 p-3.5 rounded-xl border transition-all cursor-pointer select-none ${
+                    className={`flex items-start gap-3.5 p-4 rounded-2xl border transition-all cursor-pointer select-none ${
                       task.is_completed
-                        ? 'bg-gray-50/60 dark:bg-gray-900/40 border-gray-100 dark:border-gray-800 opacity-70'
-                        : 'bg-white dark:bg-gray-800/80 border-gray-200/80 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-sm'
+                        ? 'bg-slate-900/30 border-white/5 opacity-65'
+                        : 'bg-slate-900/60 border-white/10 hover:border-indigo-400/50 hover:shadow-lg hover:shadow-indigo-500/10'
                     }`}
                   >
                     {/* Checkbox */}
                     <div className="pt-0.5">
                       <div
-                        className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
+                        className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-colors ${
                           task.is_completed
-                            ? 'bg-indigo-600 border-indigo-600 text-white'
-                            : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
+                            ? 'bg-emerald-500 border-emerald-500 text-slate-950'
+                            : 'border-white/20 bg-white/5'
                         }`}
                       >
                         {task.is_completed && (
-                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />
                         )}
                       </div>
                     </div>
@@ -371,21 +406,21 @@ export default function DashboardOverviewPage() {
                       <p
                         className={`text-sm font-semibold truncate ${
                           task.is_completed
-                            ? 'line-through text-gray-400 dark:text-gray-500'
-                            : 'text-gray-900 dark:text-white'
+                            ? 'line-through text-gray-400'
+                            : 'text-white'
                         }`}
                       >
                         {task.title}
                       </p>
                       {task.description && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
+                        <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
                           {task.description}
                         </p>
                       )}
                       <div className="flex items-center gap-2 mt-2">
                         {task.start_time && (
-                          <span className="text-[11px] text-gray-500 flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-gray-400" />
+                          <span className="text-[11px] text-gray-400 flex items-center gap-1 font-mono">
+                            <Clock className="w-3 h-3 text-indigo-400" />
                             {task.start_time.slice(0, 5)}
                             {task.end_time && ` - ${task.end_time.slice(0, 5)}`}
                           </span>
@@ -414,36 +449,40 @@ export default function DashboardOverviewPage() {
                 ))
               )}
             </div>
-          </Card>
+          </SpatialCard>
         </div>
 
         {/* Right 1 Col: Active Schedules & Upcoming Tasks */}
         <div className="space-y-6">
           {/* Active Schedules Card */}
-          <Card className="p-6">
+          <SpatialCard
+            neonGlow="indigo"
+            tiltEnabled={false}
+            className="p-6"
+          >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-base">
-                <CalendarDays className="w-5 h-5 text-indigo-500" />
+              <h3 className="font-bold text-white flex items-center gap-2 text-base font-cairo">
+                <CalendarDays className="w-5 h-5 text-indigo-400" />
                 <span>جداولي النشطة</span>
               </h3>
               <Link
                 href="/dashboard/schedules"
-                className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                className="text-xs font-semibold text-indigo-400 hover:underline flex items-center gap-1"
               >
                 <span>الكل</span>
-                <ArrowUpRight className="w-3 h-3" />
+                <ArrowUpRight className="w-3.5 h-3.5 rtl:rotate-180" />
               </Link>
             </div>
 
             {activeSchedules.length === 0 ? (
               <div className="text-center py-6">
-                <p className="text-xs text-gray-500">لا توجد جداول منشأة بعد.</p>
+                <p className="text-xs text-gray-400">لا توجد جداول منشأة بعد.</p>
                 <Link
                   href="/dashboard/schedules?create=true"
-                  className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:underline"
+                  className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-indigo-400 hover:underline"
                 >
-                  <Plus className="w-3 h-3" />
-                  <span>إنشاء جدولك الأول</span>
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>إنشاء أول جدول</span>
                 </Link>
               </div>
             ) : (
@@ -452,13 +491,13 @@ export default function DashboardOverviewPage() {
                   <Link
                     key={schedule.id}
                     href={`/dashboard/schedules/${schedule.id}`}
-                    className="block p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-indigo-200 dark:hover:border-indigo-800 transition-all hover:bg-gray-50/50 dark:hover:bg-gray-800/50"
+                    className="block p-3.5 rounded-2xl border border-white/10 bg-white/[0.02] hover:border-indigo-500/40 hover:bg-white/[0.05] transition-all"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-semibold text-sm text-gray-900 dark:text-white">
+                      <span className="font-bold text-sm text-white">
                         {schedule.name}
                       </span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-medium">
+                      <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-bold">
                         {schedule.type === 'daily'
                           ? 'يومي'
                           : schedule.type === 'weekly'
@@ -470,24 +509,28 @@ export default function DashboardOverviewPage() {
                           : 'مخصص'}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-400">
                       من {schedule.start_date} إلى {schedule.end_date}
                     </p>
                   </Link>
                 ))}
               </div>
             )}
-          </Card>
+          </SpatialCard>
 
           {/* Upcoming Tasks Card */}
-          <Card className="p-6">
-            <h3 className="font-bold text-gray-900 dark:text-white text-base mb-4 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-purple-500" />
+          <SpatialCard
+            neonGlow="cyan"
+            tiltEnabled={false}
+            className="p-6"
+          >
+            <h3 className="font-bold text-white text-base mb-4 flex items-center gap-2 font-cairo">
+              <Clock className="w-5 h-5 text-cyan-400" />
               <span>المهام القادمة</span>
             </h3>
 
             {upcomingTasks.length === 0 ? (
-              <p className="text-xs text-gray-500 text-center py-4">
+              <p className="text-xs text-gray-400 text-center py-4">
                 لا توجد مهام قادمة خلال الأيام السبعة القادمة.
               </p>
             ) : (
@@ -495,9 +538,9 @@ export default function DashboardOverviewPage() {
                 {upcomingTasks.map((task) => (
                   <div
                     key={task.id}
-                    className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/40 text-xs flex items-center justify-between"
+                    className="p-3 rounded-xl bg-white/[0.03] border border-white/5 text-xs flex items-center justify-between"
                   >
-                    <span className="font-medium text-gray-800 dark:text-gray-200 truncate">
+                    <span className="font-medium text-gray-200 truncate">
                       {task.title}
                     </span>
                     <Badge variant="outline" size="sm">
@@ -507,7 +550,7 @@ export default function DashboardOverviewPage() {
                 ))}
               </div>
             )}
-          </Card>
+          </SpatialCard>
         </div>
       </div>
     </div>

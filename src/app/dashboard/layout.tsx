@@ -12,7 +12,7 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-gray-50/60 dark:bg-gray-950 flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-gray-50/60 dark:bg-transparent flex flex-col lg:flex-row relative">
       {/* Sidebar Component */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 

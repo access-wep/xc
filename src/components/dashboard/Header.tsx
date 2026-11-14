@@ -22,7 +22,7 @@ export function Header({ onMenuClick, title }: HeaderProps) {
   }).format(new Date())
 
   return (
-    <header className="h-16 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/80 dark:border-gray-800/80 sticky top-0 z-30 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+    <header className="h-16 bg-white/80 dark:bg-slate-950/70 backdrop-blur-xl border-b border-gray-200/80 dark:border-white/10 sticky top-0 z-30 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
       {/* Left side (in RTL: right side) */}
       <div className="flex items-center gap-4">
         {/* Mobile menu toggle */}

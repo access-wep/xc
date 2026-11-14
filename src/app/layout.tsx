@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { WhatsAppSupportButton } from "@/components/WhatsAppSupportButton";
+import { CosmicBackground } from "@/components/ui/CosmicBackground";
 
 export const metadata: Metadata = {
   title: {
@@ -58,7 +59,8 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans">
+      <body className="min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans relative">
+        <CosmicBackground />
         <ThemeProvider>
           <CurrencyProvider>
             <AuthProvider>
