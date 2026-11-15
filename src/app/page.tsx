@@ -92,7 +92,7 @@ export default function FekrtoLanding() {
     if (!ctx) return
 
     let animId: number
-    const size = 320
+    const size = 380
     const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
     canvas.width = size * dpr
     canvas.height = size * dpr
@@ -350,9 +350,31 @@ export default function FekrtoLanding() {
           {/* A. العمود الأيمن (Right in RTL - 4 Cols): العنوان الكبير والباقات وطرق الدفع */}
           {/* --------------------------------------------------------------------- */}
           <div className="lg:col-span-4 space-y-6 text-right order-1 lg:order-1">
-            {/* Top Glowing Ribbon Medal Badge */}
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-cyan-950/60 border border-cyan-400/50 text-cyan-300 shadow-[0_0_20px_rgba(34,211,238,0.35)] backdrop-blur-xl">
-              <Award className="w-8 h-8 text-cyan-300 animate-pulse" />
+            {/* Top Glowing Ribbon Medal Badge (Exact SVG medal with hanging ribbon tails from video) */}
+            <div className="relative inline-block">
+              <svg width="64" height="74" viewBox="0 0 64 74" fill="none" className="filter drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]">
+                {/* Ribbon Left Tail */}
+                <path d="M22 46L16 68L28 62L34 52" fill="#7e22ce" stroke="#c084fc" strokeWidth="1.5" />
+                {/* Ribbon Right Tail */}
+                <path d="M42 46L48 68L36 62L30 52" fill="#6b21a8" stroke="#a855f7" strokeWidth="1.5" />
+                {/* Center Medal Ring */}
+                <circle cx="32" cy="30" r="24" fill="url(#medalGrad)" stroke="#c084fc" strokeWidth="2.5" />
+                {/* Inner Star / Check Icon */}
+                <path
+                  d="M24 30L29.5 35.5L40 25"
+                  stroke="#ffffff"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <defs>
+                  <linearGradient id="medalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#a855f7" />
+                    <stop offset="50%" stopColor="#7c3aed" />
+                    <stop offset="100%" stopColor="#4c1d95" />
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
 
             {/* Platform Title */}
@@ -476,49 +498,10 @@ export default function FekrtoLanding() {
           {/* C. العمود الأيسر (Left in RTL - 4 Cols): المخطط الأسبوعي ونسبة الإنجاز */}
           {/* --------------------------------------------------------------------- */}
           <div className="lg:col-span-4 space-y-4 order-3 lg:order-3">
-            {/* Upper Split: Circular Gauge + Weekly Planner Card */}
+            {/* Upper Split: Weekly Planner (Right in RTL / near Core) + Circular Gauge (Left in RTL / Far Left) */}
             <div className="grid grid-cols-12 gap-3 items-stretch">
               
-              {/* 1. Circular Progress Gauge (Left) */}
-              <div className="col-span-4 p-4 rounded-3xl bg-slate-900/60 border border-cyan-500/30 backdrop-blur-2xl shadow-[0_0_25px_rgba(34,211,238,0.2)] flex flex-col items-center justify-center relative overflow-hidden">
-                <div className="relative w-24 h-24 flex items-center justify-center">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle
-                      cx="48"
-                      cy="48"
-                      r="40"
-                      stroke="currentColor"
-                      strokeWidth="7"
-                      className="text-slate-800/80 fill-none"
-                    />
-                    <circle
-                      cx="48"
-                      cy="48"
-                      r="40"
-                      stroke="url(#progressGrad)"
-                      strokeWidth="7"
-                      strokeLinecap="round"
-                      className="fill-none transition-all duration-700 ease-out"
-                      strokeDasharray={251.32}
-                      strokeDashoffset={251.32 * (1 - progress / 100)}
-                    />
-                    <defs>
-                      <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#22d3ee" />
-                        <stop offset="100%" stopColor="#ec4899" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <span className="absolute text-2xl font-black font-cairo text-white tracking-tighter drop-shadow-[0_0_10px_#22d3ee]">
-                    {progress}%
-                  </span>
-                </div>
-                <span className="text-[11px] font-bold text-gray-300 mt-2 font-cairo whitespace-nowrap">
-                  إجمالي الإنجاز
-                </span>
-              </div>
-
-              {/* 2. The Weekly Planner Card (المخطط الأسبوعي) */}
+              {/* 1. The Weekly Planner Card (المخطط الأسبوعي) - Placed near core */}
               <div className="col-span-8 p-4 rounded-3xl bg-slate-900/60 border border-cyan-500/30 backdrop-blur-2xl shadow-[0_0_25px_rgba(34,211,238,0.2)] flex flex-col justify-between relative overflow-hidden">
                 
                 {/* Floating "مكتملة ✓" Badge Animation (Matching the video) */}
@@ -616,21 +599,61 @@ export default function FekrtoLanding() {
                   ))}
                 </div>
               </div>
-            </div>
 
-            {/* 3 Bottom Feature Cards (تحقيق أهدافك, تنظيم ذكي للوقت, إدارة مهام سهلة) */}
-            <div className="grid grid-cols-3 gap-2.5">
-              {/* Feature 1: تحقيق أهدافك */}
-              <div className="p-3 rounded-2xl bg-slate-900/60 border border-purple-500/30 backdrop-blur-xl flex flex-col items-center justify-center text-center shadow-[0_0_15px_rgba(168,85,247,0.15)] group hover:scale-105 transition-all">
-                <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-400/30 text-purple-400 flex items-center justify-center mb-1.5 shadow-[0_0_10px_rgba(168,85,247,0.25)]">
-                  <Target className="w-4 h-4" />
+              {/* 2. Circular Progress Gauge (Far Left in visual screen space) */}
+              <div className="col-span-4 p-4 rounded-3xl bg-slate-900/60 border border-cyan-500/30 backdrop-blur-2xl shadow-[0_0_25px_rgba(34,211,238,0.2)] flex flex-col items-center justify-center relative overflow-hidden">
+                <div className="relative w-24 h-24 flex items-center justify-center">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle
+                      cx="48"
+                      cy="48"
+                      r="40"
+                      stroke="currentColor"
+                      strokeWidth="7"
+                      className="text-slate-800/80 fill-none"
+                    />
+                    <circle
+                      cx="48"
+                      cy="48"
+                      r="40"
+                      stroke="url(#progressGrad)"
+                      strokeWidth="7"
+                      strokeLinecap="round"
+                      className="fill-none transition-all duration-700 ease-out"
+                      strokeDasharray={251.32}
+                      strokeDashoffset={251.32 * (1 - progress / 100)}
+                    />
+                    <defs>
+                      <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#22d3ee" />
+                        <stop offset="100%" stopColor="#ec4899" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <span className="absolute text-2xl font-black font-cairo text-white tracking-tighter drop-shadow-[0_0_10px_#22d3ee]">
+                    {progress}%
+                  </span>
                 </div>
-                <span className="text-[10px] font-bold text-gray-200 font-cairo">
-                  تحقيق أهدافك
+                <span className="text-[11px] font-bold text-gray-300 mt-2 font-cairo whitespace-nowrap">
+                  إجمالي الإنجاز
                 </span>
               </div>
 
-              {/* Feature 2: تنظيم ذكي للوقت */}
+            </div>
+
+            {/* 3 Bottom Feature Cards (Matching video ordering from right to left in RTL: إدارة مهام سهلة, تنظيم ذكي للوقت, تحقيق أهدافك) */}
+            <div className="grid grid-cols-3 gap-2.5">
+              {/* Feature 1 (Right): إدارة مهام سهلة */}
+              <div className="p-3 rounded-2xl bg-slate-900/60 border border-cyan-500/30 backdrop-blur-xl flex flex-col items-center justify-center text-center shadow-[0_0_15px_rgba(34,211,238,0.15)] group hover:scale-105 transition-all">
+                <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-400/30 text-cyan-400 flex items-center justify-center mb-1.5 shadow-[0_0_10px_rgba(34,211,238,0.25)]">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                <span className="text-[10px] font-bold text-gray-200 font-cairo">
+                  إدارة مهام سهلة
+                </span>
+              </div>
+
+              {/* Feature 2 (Middle): تنظيم ذكي للوقت */}
               <div className="p-3 rounded-2xl bg-slate-900/60 border border-purple-500/30 backdrop-blur-xl flex flex-col items-center justify-center text-center shadow-[0_0_15px_rgba(168,85,247,0.15)] group hover:scale-105 transition-all">
                 <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-400/30 text-purple-400 flex items-center justify-center mb-1.5 shadow-[0_0_10px_rgba(168,85,247,0.25)]">
                   <Hourglass className="w-4 h-4" />
@@ -640,13 +663,13 @@ export default function FekrtoLanding() {
                 </span>
               </div>
 
-              {/* Feature 3: إدارة مهام سهلة */}
-              <div className="p-3 rounded-2xl bg-slate-900/60 border border-cyan-500/30 backdrop-blur-xl flex flex-col items-center justify-center text-center shadow-[0_0_15px_rgba(34,211,238,0.15)] group hover:scale-105 transition-all">
-                <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-400/30 text-cyan-400 flex items-center justify-center mb-1.5 shadow-[0_0_10px_rgba(34,211,238,0.25)]">
-                  <CheckCircle2 className="w-4 h-4" />
+              {/* Feature 3 (Left): تحقيق أهدافك */}
+              <div className="p-3 rounded-2xl bg-slate-900/60 border border-purple-500/30 backdrop-blur-xl flex flex-col items-center justify-center text-center shadow-[0_0_15px_rgba(168,85,247,0.15)] group hover:scale-105 transition-all">
+                <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-400/30 text-purple-400 flex items-center justify-center mb-1.5 shadow-[0_0_10px_rgba(168,85,247,0.25)]">
+                  <Target className="w-4 h-4" />
                 </div>
                 <span className="text-[10px] font-bold text-gray-200 font-cairo">
-                  إدارة مهام سهلة
+                  تحقيق أهدافك
                 </span>
               </div>
             </div>
