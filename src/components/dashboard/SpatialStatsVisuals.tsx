@@ -183,41 +183,58 @@ export function VisualLiquidRingIcon({ percentage }: { percentage: number }) {
 // 5. 3D Holographic Floating Task Clipboard with Orbital Rings
 export function HolographicClipboardVisual() {
   return (
-    <div className="relative w-44 h-44 flex items-center justify-center select-none pointer-events-none">
-      {/* Outer Cyan Energy Ring 1 */}
-      <div className="absolute w-40 h-20 rounded-[100%] border border-cyan-400/50 -rotate-[22deg] animate-pulse-soft shadow-[0_0_15px_rgba(34,211,238,0.3)]" />
+    <div className="relative w-48 h-48 flex items-center justify-center select-none pointer-events-none">
+      {/* Outer Cyan Radiant Aura */}
+      <div className="absolute inset-0 bg-cyan-500/15 rounded-full blur-2xl pointer-events-none" />
+
+      {/* Outer Orbital Cyan Glow Ellipse */}
+      <div className="absolute w-44 h-24 rounded-[100%] border-2 border-cyan-400/60 -rotate-[24deg] shadow-[0_0_20px_rgba(34,211,238,0.4)] animate-pulse" />
       
-      {/* Outer Amber Energy Ring 2 */}
-      <div className="absolute w-36 h-18 rounded-[100%] border border-amber-400/40 rotate-[28deg] shadow-[0_0_15px_rgba(251,191,36,0.25)]" />
+      {/* Outer Orbital Amber/Orange Glow Ellipse */}
+      <div className="absolute w-40 h-20 rounded-[100%] border-2 border-amber-400/50 rotate-[32deg] shadow-[0_0_20px_rgba(251,191,36,0.35)]" />
 
       {/* Floating Stardust Photons */}
-      <span className="absolute -top-2 left-8 w-2 h-2 rounded-full bg-cyan-300 shadow-[0_0_10px_#22d3ee] animate-ping" />
-      <span className="absolute bottom-2 right-6 w-1.5 h-1.5 rounded-full bg-amber-300 shadow-[0_0_10px_#fbbf24] animate-ping" />
-      <span className="absolute top-10 right-2 w-1.5 h-1.5 rounded-full bg-purple-300 shadow-[0_0_10px_#a855f7]" />
+      <span className="absolute -top-1 left-10 w-2 h-2 rounded-full bg-cyan-300 shadow-[0_0_12px_#22d3ee] animate-ping" />
+      <span className="absolute bottom-3 right-8 w-1.5 h-1.5 rounded-full bg-amber-300 shadow-[0_0_12px_#fbbf24] animate-ping" />
+      <span className="absolute top-8 right-3 w-2 h-2 rounded-full bg-purple-300 shadow-[0_0_12px_#c084fc]" />
+      <span className="absolute bottom-6 left-6 w-1.5 h-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_#34d399]" />
 
-      {/* Center 3D Floating Clipboard Sheet */}
-      <div className="relative w-24 h-32 rounded-2xl bg-gradient-to-b from-cyan-950/70 via-slate-900/80 to-slate-950/90 border-2 border-cyan-400/60 shadow-[0_0_25px_rgba(34,211,238,0.35)] backdrop-blur-xl p-3 flex flex-col justify-between transform -rotate-3 hover:rotate-0 transition-transform duration-300">
-        {/* Top Clip */}
-        <div className="w-10 h-3 rounded-md bg-cyan-400 mx-auto -mt-4 shadow-[0_0_10px_#22d3ee] border border-white/40" />
+      {/* Center 3D Floating Glass Clipboard */}
+      <div className="relative w-28 h-36 rounded-2xl bg-gradient-to-b from-cyan-950/80 via-slate-900/90 to-slate-950/95 border-2 border-cyan-300/80 shadow-[0_0_30px_rgba(34,211,238,0.45)] backdrop-blur-2xl p-3 flex flex-col justify-between transform -rotate-6 transition-all duration-300">
+        {/* Metal Top Clip */}
+        <div className="w-12 h-3.5 rounded-lg bg-gradient-to-r from-cyan-400 to-sky-300 mx-auto -mt-5 shadow-[0_0_12px_#22d3ee] border border-white/50 flex items-center justify-center">
+          <div className="w-4 h-1 rounded-full bg-cyan-950" />
+        </div>
 
-        {/* Task Lines */}
-        <div className="space-y-2 mt-2">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
-            <div className="h-1.5 w-12 rounded bg-cyan-200/80" />
+        {/* Task Checklist Holographic Lines */}
+        <div className="space-y-2.5 mt-2">
+          {/* Row 1: Emerald Check */}
+          <div className="flex items-center gap-2">
+            <div className="w-3.5 h-3.5 rounded-md bg-emerald-500/20 border border-emerald-400 flex items-center justify-center shadow-[0_0_6px_#34d399]">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
+            </div>
+            <div className="h-2 w-14 rounded bg-cyan-100/90 shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#22d3ee]" />
-            <div className="h-1.5 w-10 rounded bg-cyan-300/60" />
+
+          {/* Row 2: Cyan Check */}
+          <div className="flex items-center gap-2">
+            <div className="w-3.5 h-3.5 rounded-md bg-cyan-500/20 border border-cyan-400 flex items-center justify-center shadow-[0_0_6px_#22d3ee]">
+              <div className="w-1.5 h-1.5 rounded-full bg-cyan-300" />
+            </div>
+            <div className="h-2 w-12 rounded bg-cyan-200/70" />
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_#fbbf24]" />
-            <div className="h-1.5 w-14 rounded bg-cyan-300/60" />
+
+          {/* Row 3: Amber Check */}
+          <div className="flex items-center gap-2">
+            <div className="w-3.5 h-3.5 rounded-md bg-amber-500/20 border border-amber-400 flex items-center justify-center shadow-[0_0_6px_#fbbf24]">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-300" />
+            </div>
+            <div className="h-2 w-16 rounded bg-cyan-200/70" />
           </div>
         </div>
 
         {/* Bottom Sparkle Indicator */}
-        <div className="h-1 w-8 rounded-full bg-cyan-400/50 mx-auto" />
+        <div className="h-1.5 w-10 rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 mx-auto shadow-[0_0_8px_#22d3ee]" />
       </div>
     </div>
   )

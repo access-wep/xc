@@ -225,21 +225,34 @@ export default function DashboardOverviewPage() {
               : `لديك اليوم ${totalTasks} مهام مسجلة، أنجزت منها ${completedTasks} حتى الآن. استمر بتغذية مدارات طاقتك!`}
           </p>
 
-          {/* Centered Glowing HUD Pill Buttons */}
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-            {/* Right Amber Pill: Streak */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-950/40 border border-amber-500/40 text-amber-300 text-xs font-bold shadow-[0_0_15px_rgba(245,158,11,0.25)] backdrop-blur-md">
-              <Flame className="w-4 h-4 text-amber-400 fill-amber-400 animate-pulse" />
-              <span className="font-cairo">معدل الالتزام: 5 أيام متتالية</span>
-            </div>
+          {/* Centered Glowing HUD Pill Buttons matching the spatial 3D mockup */}
+          <div className="flex flex-wrap items-center justify-center gap-3.5 pt-2">
+            {/* Right Gold Pill: Upgrade to Paid Plan */}
+            <Link
+              href="/dashboard/subscription"
+              className="inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.25)] hover:bg-amber-900/50 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all cursor-pointer backdrop-blur-md text-right group"
+            >
+              <div className="w-6 h-6 rounded-lg bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.3)]">
+                <Sparkles className="w-3.5 h-3.5 fill-amber-300" />
+              </div>
+              <div className="flex flex-col text-right">
+                <span className="text-xs font-bold font-cairo">الترقية إلى الخطة المدفوعة</span>
+                <span className="text-[10px] text-amber-200/70 font-normal">استمتع بمميزات غير محدودة</span>
+              </div>
+            </Link>
 
-            {/* Left Cyan Pill: Today's Schedule */}
+            {/* Left Cyan Pill: Today's Detailed Schedule */}
             <Link
               href="/dashboard/today"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-950/40 border border-cyan-500/40 text-cyan-300 text-xs font-bold shadow-[0_0_15px_rgba(34,211,238,0.25)] hover:bg-cyan-900/50 hover:shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all cursor-pointer backdrop-blur-md"
+              className="inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-cyan-950/40 border border-cyan-500/40 text-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.25)] hover:bg-cyan-900/50 hover:shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all cursor-pointer backdrop-blur-md text-right group"
             >
-              <CalendarCheck className="w-4 h-4 text-cyan-400" />
-              <span className="font-cairo">الجدول اليومي التفصيلي</span>
+              <div className="w-6 h-6 rounded-lg bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-300 shadow-[0_0_8px_rgba(34,211,238,0.3)]">
+                <CalendarCheck className="w-3.5 h-3.5" />
+              </div>
+              <div className="flex flex-col text-right">
+                <span className="text-xs font-bold font-cairo">عرض تفاصيل جدول اليوم</span>
+                <span className="text-[10px] text-cyan-200/70 font-normal">خطتك لليوم الحالي بالتفصيل</span>
+              </div>
             </Link>
           </div>
         </div>
@@ -389,30 +402,30 @@ export default function DashboardOverviewPage() {
 
             {/* Body: Empty Hologram or Task List */}
             {todayTasks.length === 0 ? (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-6 py-6">
-                {/* 3D Floating Holographic Task Clipboard Graphic */}
-                <div className="flex-shrink-0">
-                  <HolographicClipboardVisual />
-                </div>
-
-                {/* Text Description & Glowing Action Button */}
-                <div className="flex-1 text-right space-y-3">
-                  <h4 className="text-base font-bold text-white font-cairo">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-6 py-4">
+                {/* Text Description & Glowing Action Button (Right in RTL) */}
+                <div className="flex-1 text-right space-y-3 order-1 sm:order-1">
+                  <h4 className="text-sm font-bold text-gray-200 font-cairo">
                     لا توجد مهام مسجلة لهذا اليوم
                   </h4>
-                  <p className="text-xs text-gray-300 leading-relaxed max-w-md">
+                  <p className="text-xs text-gray-400 leading-relaxed max-w-sm font-cairo">
                     أضف مهام جديدة لجدولك اليومي هذا وابدأ رحلتك لخطة مسددة وراقب مدارات طاقتك وهي تتسارع.
                   </p>
 
                   <div className="pt-2">
                     <Link
                       href="/dashboard/today"
-                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 text-slate-950 font-black text-xs shadow-[0_0_20px_rgba(34,211,238,0.4)] hover:shadow-[0_0_25px_rgba(34,211,238,0.6)] hover:scale-105 active:scale-95 transition-all font-cairo"
+                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 text-slate-950 font-black text-xs shadow-[0_0_20px_rgba(34,211,238,0.5)] hover:shadow-[0_0_30px_rgba(34,211,238,0.8)] hover:scale-105 active:scale-95 transition-all font-cairo"
                     >
                       <Plus className="w-4 h-4 stroke-[3]" />
                       <span>إضافة مهمة الآن</span>
                     </Link>
                   </div>
+                </div>
+
+                {/* 3D Floating Holographic Task Clipboard Graphic (Left in RTL) */}
+                <div className="flex-shrink-0 order-2 sm:order-2">
+                  <HolographicClipboardVisual />
                 </div>
               </div>
             ) : (
@@ -492,74 +505,69 @@ export default function DashboardOverviewPage() {
           <SpatialCard
             neonGlow="indigo"
             tiltEnabled={false}
-            className="p-6 bg-slate-900/50 border-indigo-500/20 min-h-[260px] flex flex-col justify-between"
+            className="p-4 sm:p-5 bg-slate-900/50 border-indigo-500/20 min-h-[260px] flex flex-col justify-center gap-3.5"
           >
-            {/* 2x2 Bento Sub-Tiles Grid matching the reference image */}
-            <div className="grid grid-cols-2 gap-3.5 h-full">
-              {/* Tile 1: جداول النشاط (Top Right) */}
-              <Link
-                href="/dashboard/schedules"
-                className="p-4 rounded-2xl bg-slate-950/70 border border-amber-500/30 hover:border-amber-400/60 shadow-[0_0_15px_rgba(245,158,11,0.15)] flex flex-col justify-between transition-all hover:scale-[1.02] group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white font-cairo group-hover:text-amber-400 transition-colors">
+            {/* Card 1: جداول النشاط (Horizontal Card with Glowing Mini Bar Chart) */}
+            <Link
+              href="/dashboard/schedules"
+              className="p-3.5 sm:p-4 rounded-2xl bg-slate-950/80 border border-white/10 hover:border-amber-500/40 shadow-[0_0_20px_rgba(0,0,0,0.5)] flex items-center justify-between transition-all hover:scale-[1.01] group backdrop-blur-xl"
+            >
+              {/* Right side in RTL: Icon + Title + Subtitle */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.2)] group-hover:scale-105 transition-transform">
+                  <Hourglass className="w-5 h-5 animate-pulse" />
+                </div>
+                <div className="text-right">
+                  <span className="text-xs sm:text-sm font-bold text-white font-cairo group-hover:text-amber-400 transition-colors block">
                     جداول النشاط
                   </span>
-                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
-                    <Hourglass className="w-4 h-4 animate-pulse" />
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <p className="text-[10px] text-gray-400 leading-tight">
+                  <span className="text-[10px] text-gray-400 leading-tight block mt-0.5">
                     {activeSchedules.length > 0
                       ? `${activeSchedules.length} جداول نشطة مفعلة`
                       : 'دخول سينما الوقت والنشاط'}
-                  </p>
-                </div>
-              </Link>
-
-              {/* Tile 2: 3D Bar Chart Visual Graphic (Top Left) */}
-              <div className="p-3.5 rounded-2xl bg-slate-950/70 border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.15)] flex items-center justify-center">
-                <div className="flex items-end gap-2 h-14 w-full justify-center px-2">
-                  <div className="w-3 rounded-t-md bg-purple-500 h-8 shadow-[0_0_8px_#a855f7]" />
-                  <div className="w-3 rounded-t-md bg-cyan-400 h-14 shadow-[0_0_8px_#22d3ee]" />
-                  <div className="w-3 rounded-t-md bg-amber-400 h-10 shadow-[0_0_8px_#fbbf24]" />
-                  <div className="w-3 rounded-t-md bg-rose-500 h-6 shadow-[0_0_8px_#f43f5e]" />
+                  </span>
                 </div>
               </div>
 
-              {/* Tile 3: المهام القادمة (Bottom Right) */}
-              <Link
-                href="/dashboard/today"
-                className="p-4 rounded-2xl bg-slate-950/70 border border-purple-500/30 hover:border-purple-400/60 shadow-[0_0_15px_rgba(168,85,247,0.15)] flex flex-col justify-between transition-all hover:scale-[1.02] group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white font-cairo group-hover:text-purple-400 transition-colors">
+              {/* Left side in RTL: 3D Glowing Mini Bar Chart */}
+              <div className="px-3 py-2 rounded-xl bg-slate-900/90 border border-cyan-500/30 shadow-[inset_0_0_12px_rgba(34,211,238,0.2)] flex items-end gap-1.5 h-12">
+                <div className="w-2.5 rounded-t-sm bg-purple-500 h-6 shadow-[0_0_8px_#a855f7]" />
+                <div className="w-2.5 rounded-t-sm bg-cyan-400 h-11 shadow-[0_0_8px_#22d3ee]" />
+                <div className="w-2.5 rounded-t-sm bg-amber-400 h-8 shadow-[0_0_8px_#fbbf24]" />
+                <div className="w-2.5 rounded-t-sm bg-rose-500 h-5 shadow-[0_0_8px_#f43f5e]" />
+              </div>
+            </Link>
+
+            {/* Card 2: المهام القادمة (Horizontal Card with Glowing Mini Bar Chart) */}
+            <Link
+              href="/dashboard/today"
+              className="p-3.5 sm:p-4 rounded-2xl bg-slate-950/80 border border-white/10 hover:border-purple-500/40 shadow-[0_0_20px_rgba(0,0,0,0.5)] flex items-center justify-between transition-all hover:scale-[1.01] group backdrop-blur-xl"
+            >
+              {/* Right side in RTL: Icon + Title + Subtitle */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-400 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.2)] group-hover:scale-105 transition-transform">
+                  <Hourglass className="w-5 h-5 text-purple-400" />
+                </div>
+                <div className="text-right">
+                  <span className="text-xs sm:text-sm font-bold text-white font-cairo group-hover:text-purple-400 transition-colors block">
                     المهام القادمة
                   </span>
-                  <div className="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
-                    <CalendarDays className="w-4 h-4" />
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <p className="text-[10px] text-gray-400 leading-tight">
+                  <span className="text-[10px] text-gray-400 leading-tight block mt-0.5">
                     {upcomingTasks.length > 0
                       ? `${upcomingTasks.length} مهام خلال 7 أيام`
-                      : 'أضف مهام لتبقى الإنتاجية'}
-                  </p>
-                </div>
-              </Link>
-
-              {/* Tile 4: 3D Performance Chart Visual Graphic (Bottom Left) */}
-              <div className="p-3.5 rounded-2xl bg-slate-950/70 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.15)] flex items-center justify-center">
-                <div className="flex items-end gap-2 h-14 w-full justify-center px-2">
-                  <div className="w-3 rounded-t-md bg-rose-500 h-6 shadow-[0_0_8px_#f43f5e]" />
-                  <div className="w-3 rounded-t-md bg-amber-400 h-9 shadow-[0_0_8px_#fbbf24]" />
-                  <div className="w-3 rounded-t-md bg-cyan-400 h-11 shadow-[0_0_8px_#22d3ee]" />
-                  <div className="w-3 rounded-t-md bg-emerald-400 h-14 shadow-[0_0_8px_#34d399]" />
+                      : 'أضف مهام جديدة لجدولك اليومي لأعلى إنتاجية'}
+                  </span>
                 </div>
               </div>
-            </div>
+
+              {/* Left side in RTL: 3D Glowing Mini Bar Chart */}
+              <div className="px-3 py-2 rounded-xl bg-slate-900/90 border border-emerald-500/30 shadow-[inset_0_0_12px_rgba(16,185,129,0.2)] flex items-end gap-1.5 h-12">
+                <div className="w-2.5 rounded-t-sm bg-rose-500 h-5 shadow-[0_0_8px_#f43f5e]" />
+                <div className="w-2.5 rounded-t-sm bg-amber-400 h-7 shadow-[0_0_8px_#fbbf24]" />
+                <div className="w-2.5 rounded-t-sm bg-cyan-400 h-9 shadow-[0_0_8px_#22d3ee]" />
+                <div className="w-2.5 rounded-t-sm bg-emerald-400 h-11 shadow-[0_0_8px_#34d399]" />
+              </div>
+            </Link>
           </SpatialCard>
         </div>
       </div>
