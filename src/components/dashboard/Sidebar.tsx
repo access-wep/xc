@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
@@ -18,7 +18,6 @@ import {
   Sun,
   Moon,
   Shield,
-  Menu,
   X,
   PlusCircle,
 } from 'lucide-react'
@@ -28,19 +27,19 @@ interface SidebarProps {
   onClose?: () => void
 }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
+export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname()
   const { user, profile, isAdmin, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
 
   const navItems = [
     {
-      title: 'الرئيسية',
+      title: 'الرئيسية (المركز الفضائي)',
       href: '/dashboard',
       icon: LayoutDashboard,
     },
     {
-      title: 'جدول اليوم',
+      title: 'جدول اليوم التفصيلي',
       href: '/dashboard/today',
       icon: CalendarCheck2,
       badge: 'مباشر',
@@ -61,7 +60,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       icon: PlusCircle,
     },
     {
-      title: 'التحليلات والإنجاز',
+      title: 'التحليلات ومعدل الطاقة',
       href: '/dashboard/stats',
       icon: BarChart3,
     },
@@ -79,59 +78,64 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile Backdrop */}
+      {/* Backdrop for all screen sizes */}
       {isOpen && (
         <div
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md transition-opacity duration-300"
         />
       )}
 
-      {/* Sidebar Container */}
+      {/* Sliding HUD Navigation Drawer */}
       <aside
         className={cn(
-          'fixed top-0 bottom-0 start-0 z-50 w-72 bg-white/95 dark:bg-slate-950/85 backdrop-blur-2xl border-e border-gray-200/80 dark:border-white/10 flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0',
-          isOpen ? 'translate-x-0' : 'max-lg:-translate-x-full'
+          'fixed top-0 bottom-0 start-0 z-50 w-80 bg-slate-950/95 backdrop-blur-2xl border-s border-white/15 shadow-[0_0_50px_rgba(0,0,0,0.85)] flex flex-col transition-transform duration-300 ease-in-out text-white',
+          isOpen ? 'translate-x-0' : 'translate-x-full rtl:translate-x-full'
         )}
       >
-        {/* Brand / Logo */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100 dark:border-gray-800/60">
-          <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-l from-indigo-600 to-purple-600 flex items-center justify-center shadow-md shadow-indigo-500/20">
-              <Sparkles className="w-5 h-5 text-white" />
+        {/* Brand / Logo + Close Button */}
+        <div className="h-16 flex items-center justify-between px-6 border-b border-white/10">
+          <Link
+            href="/dashboard"
+            onClick={onClose}
+            className="flex items-center gap-2.5 group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/25 group-hover:scale-105 transition-transform">
+              <span className="font-black text-lg text-slate-950">ف</span>
             </div>
             <div className="flex flex-col">
-              <span className="font-bold text-lg text-gray-900 dark:text-white leading-tight">
+              <span className="font-black text-lg text-white leading-tight font-cairo">
                 فكرتو
               </span>
-              <span className="text-[10px] text-gray-400 font-medium tracking-wider">
-                إدارة الوقت والمهام
+              <span className="text-[10px] text-cyan-300 font-bold tracking-wider">
+                إدارة المهام المكانية
               </span>
             </div>
           </Link>
 
-          {/* Mobile close button */}
+          {/* Close button */}
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 lg:hidden cursor-pointer"
+            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            title="إغلاق القائمة"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* User Card */}
-        <div className="p-4 mx-4 my-3 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800">
+        <div className="p-4 mx-4 my-3 rounded-2xl bg-slate-900/70 border border-white/10 shadow-inner">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-sm shadow-sm flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-500 to-indigo-600 text-slate-950 font-black flex items-center justify-center text-sm shadow-md shadow-cyan-500/20 flex-shrink-0">
               {profile?.full_name ? profile.full_name.slice(0, 2) : 'ف'}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+              <p className="text-sm font-bold text-white truncate font-cairo">
                 {profile?.full_name || user?.email?.split('@')[0] || 'المستخدم'}
               </p>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                <span className="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                <span className="text-xs text-cyan-300 font-medium truncate font-cairo">
                   {isAdmin ? 'مدير النظام' : 'عضو مفعل'}
                 </span>
               </div>
@@ -139,7 +143,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
         </div>
 
-        {/* Navigation Links */}
+        {/* Navigation Items */}
         <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href
@@ -151,17 +155,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 href={item.href}
                 onClick={onClose}
                 className={cn(
-                  'flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group cursor-pointer',
+                  'flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all group cursor-pointer font-cairo',
                   isActive
-                    ? 'bg-gradient-to-l from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/25'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
+                    ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-slate-950 shadow-lg shadow-cyan-500/25 scale-[1.02]'
+                    : 'text-slate-300 hover:bg-white/5 hover:text-white border border-transparent hover:border-white/5'
                 )}
               >
                 <div className="flex items-center gap-3">
                   <Icon
                     className={cn(
-                      'w-5 h-5 transition-transform group-hover:scale-110',
-                      isActive ? 'text-white' : 'text-gray-400 dark:text-gray-500'
+                      'w-4 h-4 transition-transform group-hover:scale-110',
+                      isActive ? 'text-slate-950 stroke-[2.5]' : 'text-slate-400 group-hover:text-cyan-400'
                     )}
                   />
                   <span>{item.title}</span>
@@ -169,10 +173,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 {item.badge && (
                   <span
                     className={cn(
-                      'text-[10px] font-semibold px-2 py-0.5 rounded-full',
+                      'px-2 py-0.5 rounded-full text-[10px] font-bold font-mono',
                       isActive
-                        ? 'bg-white/20 text-white'
-                        : 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400'
+                        ? 'bg-slate-950/30 text-slate-950'
+                        : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
                     )}
                   >
                     {item.badge}
@@ -182,59 +186,41 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             )
           })}
 
-          {/* Admin link if user is admin */}
+          {/* Admin link */}
           {isAdmin && (
-            <div className="pt-4 mt-2 border-t border-gray-100 dark:border-gray-800">
-              <Link
-                href="/admin"
-                className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
-              >
-                <Shield className="w-5 h-5" />
-                <span>لوحة تحكم الإدارة</span>
-              </Link>
-            </div>
+            <Link
+              href="/admin"
+              onClick={onClose}
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-amber-300 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-all font-cairo mt-3"
+            >
+              <Shield className="w-4 h-4 text-amber-400" />
+              <span>لوحة الإدارة المركزية</span>
+            </Link>
           )}
         </div>
 
-        {/* Quick Action Button */}
-        <div className="px-4 py-3">
+        {/* Quick Action: New Schedule */}
+        <div className="p-4 border-t border-white/10">
           <Link
-            href="/dashboard/schedules?create=true"
-            className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 text-sm font-medium hover:bg-indigo-100/50 dark:hover:bg-indigo-900/30 transition-colors cursor-pointer"
+            href="/dashboard/schedules"
+            onClick={onClose}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10 text-xs font-bold transition-all shadow-[0_0_15px_rgba(34,211,238,0.15)] font-cairo"
           >
             <PlusCircle className="w-4 h-4" />
             <span>إنشاء جدول جديد</span>
           </Link>
         </div>
 
-        {/* Footer Controls */}
-        <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-          <button
-            onClick={toggleTheme}
-            className="flex items-center gap-2 p-2 rounded-xl text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-            title="تبديل المظهر"
-          >
-            {theme === 'dark' ? (
-              <>
-                <Sun className="w-4 h-4 text-amber-400" />
-                <span className="text-xs">نهاري</span>
-              </>
-            ) : (
-              <>
-                <Moon className="w-4 h-4 text-indigo-500" />
-                <span className="text-xs">ليلي</span>
-              </>
-            )}
-          </button>
-
+        {/* Footer controls: Logout */}
+        <div className="p-4 border-t border-white/10 flex items-center justify-between text-xs">
           <button
             onClick={() => signOut()}
-            className="flex items-center gap-1.5 p-2 rounded-xl text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
-            title="تسجيل الخروج"
+            className="flex items-center gap-1.5 text-rose-400 hover:text-rose-300 transition-colors font-bold font-cairo"
           >
             <LogOut className="w-4 h-4" />
-            <span className="text-xs">خروج</span>
+            <span>تسجيل الخروج</span>
           </button>
+          <span className="text-[11px] text-slate-500 font-mono">Fekrto v2.0</span>
         </div>
       </aside>
     </>

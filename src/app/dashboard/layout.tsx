@@ -12,17 +12,17 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-gray-50/60 dark:bg-transparent flex flex-col lg:flex-row relative">
-      {/* Sidebar Component */}
+    <div className="min-h-screen bg-[#020617] text-white flex flex-col relative overflow-x-hidden selection:bg-cyan-500 selection:text-slate-950">
+      {/* Sliding HUD Navigation Drawer */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Main Content Area */}
-      <div className="flex-1 lg:ms-72 flex flex-col min-h-screen">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          {children}
-        </main>
-      </div>
+      {/* Floating HUD Top Header */}
+      <Header onMenuClick={() => setSidebarOpen(true)} />
+
+      {/* Main Full-Width Panoramic Content Area - NO SIDEBAR PUSHING OR SQUEEZING */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {children}
+      </main>
     </div>
   )
 }
