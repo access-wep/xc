@@ -2,101 +2,69 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { useTheme } from '@/contexts/ThemeContext'
-import { useCurrency } from '@/contexts/CurrencyContext'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
+import { useCurrency } from '@/contexts/CurrencyContext'
 import { CurrencySelector } from '@/components/CurrencySelector'
 import {
-  Calendar,
-  Clock,
-  BarChart3,
-  Flame,
-  CheckCircle2,
-  Circle,
-  ArrowLeft,
-  Sun,
-  Moon,
   Sparkles,
-  ShieldCheck,
-  Zap,
-  Smartphone,
-  ChevronDown,
-  Layers,
-  Heart,
   Check,
-  CreditCard,
-  Building2,
-  Wallet,
-  ArrowRight,
+  CheckCircle2,
+  Flame,
+  ArrowLeft,
   Shield,
+  Layers,
+  Zap,
+  Clock,
+  Calendar,
+  BarChart3,
+  ChevronDown,
   LogOut,
-  User,
+  Smartphone,
+  Wallet,
+  ShieldCheck,
+  Target,
+  Rocket,
+  Compass,
 } from 'lucide-react'
 
-// Demo interactive task type
-interface DemoTask {
-  id: string
-  title: string
-  time: string
-  priority: 'عالية' | 'عاجلة' | 'متوسطة' | 'شخصية'
-  completed: boolean
-  tag: string
-}
-
-export default function HomePage() {
-  const { theme, toggleTheme } = useTheme()
-  const { currentCountry, formatPrice } = useCurrency()
+export default function FekrtoLanding() {
   const { user, profile, isAdmin, signOut } = useAuth()
+  const { currentCountry, formatPrice } = useCurrency()
 
+  const [focusMode, setFocusMode] = useState(false)
+  const [selectedDayIdx, setSelectedDayIdx] = useState(3) // Default: الأربعاء 23
   const [isYearly, setIsYearly] = useState(true)
   const [openFaq, setOpenFaq] = useState<number | null>(0)
 
   // Interactive Live Demo Tasks
-  const [demoTasks, setDemoTasks] = useState<DemoTask[]>([
-    {
-      id: '1',
-      title: 'صلاة الفجر وورد الصباح وجلسة تخطيط اليوم',
-      time: '05:30 ص',
-      priority: 'عالية',
-      completed: true,
-      tag: 'عادات وروتين',
-    },
-    {
-      id: '2',
-      title: 'جلسة تركيز عميق 90 دقيقة: إنجاز تقرير المشروع النهائي',
-      time: '09:00 ص',
-      priority: 'عاجلة',
-      completed: true,
-      tag: 'عمل',
-    },
-    {
-      id: '3',
-      title: 'اجتماع فريق العمل لمراجعة مؤشرات الأداء الأسبوعية',
-      time: '01:30 م',
-      priority: 'متوسطة',
-      completed: false,
-      tag: 'اجتماعات',
-    },
-    {
-      id: '4',
-      title: 'ممارسة الرياضة 45 دقيقة وقضاء وقت عائلي ممتع',
-      time: '05:30 م',
-      priority: 'شخصية',
-      completed: false,
-      tag: 'صحة وحياة',
-    },
+  const [tasks, setTasks] = useState([
+    { id: 1, title: 'مراجعة العروض التسويقية وجلسة التخطيط', completed: true, priority: 'عالية', time: '09:00 ص' },
+    { id: 2, title: 'إعداد تقرير المشروع النهائي ومؤشرات الأداء', completed: false, priority: 'عاجلة', time: '11:30 ص' },
+    { id: 3, title: 'إنجاز مهام العميل ومراجعة الجداول', completed: true, priority: 'مستمرة', time: '02:00 م' },
+    { id: 4, title: 'جلسة تركيز عميق: القراءة والتعلم الذاتي', completed: false, priority: 'شخصية', time: '06:00 م' },
   ])
 
-  const toggleDemoTask = (id: string) => {
-    setDemoTasks((prev) =>
+  const completedCount = tasks.filter((t) => t.completed).length
+  const progress = Math.round((completedCount / tasks.length) * 100)
+
+  const toggleTask = (id: number) => {
+    setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
     )
   }
 
-  const completedCount = demoTasks.filter((t) => t.completed).length
-  const completionRate = Math.round((completedCount / demoTasks.length) * 100)
+  const daysList = [
+    { label: 'الأحد', date: '20' },
+    { label: 'الإثنين', date: '21' },
+    { label: 'الثلاثاء', date: '22' },
+    { label: 'الأربعاء', date: '23' },
+    { label: 'الخميس', date: '24' },
+    { label: 'الجمعة', date: '25' },
+    { label: 'السبت', date: '26' },
+  ]
 
-  // FAQs tailored to real Arab users
+  // FAQs
   const faqs = [
     {
       q: 'هل المنصة متاحة في جميع الدول العربية وبأسعار مناسبة؟',
@@ -104,390 +72,412 @@ export default function HomePage() {
     },
     {
       q: 'كيف يعمل نظام الدفع المحلي والتحويلات اليدوية؟',
-      a: `نوفر طرق الدفع المألوفة والمريحة في كل دولة عربية؛ مثل إنستاباي وفودافون كاش في مصر، مدى وSTC Pay في السعودية، كي نت في الكويت، بنفت باي في البحرين، كليك في الأردن، والتحويلات البنكية المباشرة. تقوم فقط بإرفاق صورة إيصال التحويل، ويقوم فريق الإدارة بمراجعته وتفعيل اشتراكك فورياً.`,
+      a: `نوفر طرق الدفع المألوفة والمريحة في كل دولة عربية؛ مثل إنستاباي وفودافون كاش في مصر، مدى وSTC Pay في السعودية، كي نت في الكويت، بنفت باي في البحرين، كليك في الأردن، والتحويلات البنكية المباشرة. تقوم فقط برفع صورة إيصال التحويل، ويقوم فريق الإدارة بمراجعته وتفعيل اشتراكك فورياً.`,
     },
     {
       q: 'هل هناك التزام أو تجديد إجباري للاشتراك؟',
       a: 'لا توجد أي اشتراكات خفية أو خصومات تلقائية مفاجئة. نظام الدفع اليدوي يمنحك السيطرة الكاملة لتجديد اشتراكك متى شئت وبكل راحة بال.',
     },
     {
-      q: 'هل يدعم الموقع الهواتف الذكية والأجهزة اللوحية؟',
-      a: 'نعم، تم بناء واجهة فكرتو بالكامل لتكون متجاوبة وخفيفة وسريعة على كافة الشاشات، سواء كنت تتصفح من الهاتف الذكي، الآيباد، أو شاشة الحاسوب.',
+      q: 'ما هو "وضع التركيز" وإدارة المهام المكانية ثلاثية الأبعاد؟',
+      a: 'هو نظام بصري تفاعلي يركز طاقتك الذهنية على المهام الحالية فقط مع حجب المشتتات، ومتابعة مدارات طاقتك ونسبة إنجازك اليومية في بيئة عمل ثلاثية الأبعاد مصممة بعناية.',
     },
     {
-      q: 'ما الذي يميز فكرتو عن برامج تنظيم المهام الأجنبية المعقدة؟',
-      a: 'البرامج الأجنبية غالباً ما تكون مزدحمة ومعقدة ومصممة بثقافة عمل مختلفة. فكرتو تتميز بواجهة عربية أصيلة وهادئة، تراعي إيقاع اليوم العربي (أوقات الصلوات، أسبوع العمل من الأحد للخميس، والتركيز على الإنجاز الفعلي بدل مجرد تدوين المهام).',
+      q: 'هل يدعم الموقع الهواتف الذكية والأجهزة اللوحية؟',
+      a: 'نعم، تم بناء واجهة فكرتو بالكامل لتكون متجاوبة وخفيفة وسريعة على كافة الشاشات، سواء كنت تتصفح من الهاتف الذكي، الآيباد، أو شاشة الحاسوب.',
     },
   ]
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-emerald-500 selection:text-white font-sans antialiased">
-      {/* 1. TOP ANNOUNCEMENT BAR */}
-      <div className="bg-emerald-900/90 text-emerald-100 text-xs py-2 px-4 text-center border-b border-emerald-800/60 flex items-center justify-center gap-2 flex-wrap">
-        <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium">
-          جديد الوطن العربي 🌍
-        </span>
-        <span>
-          دعم كامل لكافة الدول العربية مع العملات المحلية وطرق الدفع المفضلة لديك ({currentCountry.flag} {currentCountry.shortName}: {currentCountry.currencyName})
-        </span>
+    <main className="relative min-h-screen bg-[#020617] text-white overflow-hidden font-sans rtl selection:bg-cyan-500 selection:text-slate-950">
+      {/* ========================================================================= */}
+      {/* 1. الخلفية الكونية الحية (Cosmic Nebula & Neural Glow)                    */}
+      {/* ========================================================================= */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(15,23,42,0.85),rgba(2,6,23,1))] z-0 pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] animate-pulse pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse delay-1000 pointer-events-none" />
+        <div className="absolute top-2/3 left-1/2 -translate-x-1/2 w-[700px] h-[300px] bg-purple-500/5 rounded-full blur-[140px] pointer-events-none" />
       </div>
 
-      {/* 2. NAVIGATION BAR */}
-      <nav className="sticky top-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-600/20 group-hover:scale-105 transition-transform">
-                <Layers className="w-5 h-5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-                  فكرتو
-                </span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 -mt-1 font-medium tracking-wide">
-                  Fekrto • تنظيم الوقت العربي
-                </span>
-              </div>
-            </Link>
-
-            {/* Nav Links */}
-            <div className="hidden lg:flex items-center gap-7">
-              <a
-                href="#demo"
-                className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
-              >
-                التجربة الحية
-              </a>
-              <a
-                href="#features"
-                className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
-              >
-                لماذا فكرتو؟
-              </a>
-              <a
-                href="#pricing"
-                className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
-              >
-                الأسعار بالعملة المحلية
-              </a>
-              <a
-                href="#testimonials"
-                className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
-              >
-                تجارب المستخدمين
-              </a>
-              <a
-                href="#faq"
-                className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
-              >
-                الأسئلة الشائعة
-              </a>
+      {/* ========================================================================= */}
+      {/* 2. الـ Navbar العلوي الزجاجي العائم                                       */}
+      {/* ========================================================================= */}
+      <div className="sticky top-4 z-50 px-4 sm:px-8 max-w-7xl mx-auto">
+        <nav className="flex items-center justify-between px-6 py-4 backdrop-blur-2xl bg-slate-950/70 border border-white/10 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.5)]">
+          {/* الشعار */}
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-cyan-500/30 group-hover:scale-105 transition-transform">
+              <span className="font-black text-xl text-slate-950">ف</span>
             </div>
-
-            {/* Actions & Currency Selector */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* Country & Currency Switcher */}
-              <CurrencySelector />
-
-              {/* Theme Toggle */}
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                aria-label="تبديل الوضع"
-              >
-                {theme === 'dark' ? (
-                  <Sun className="w-4 h-4 text-amber-400" />
-                ) : (
-                  <Moon className="w-4 h-4 text-slate-600" />
-                )}
-              </button>
-
-              {/* Auth links & Persistent Session recognition */}
-              {user ? (
-                <div className="flex items-center gap-2">
-                  {isAdmin && (
-                    <Link
-                      href="/admin"
-                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-bold hover:bg-amber-500/20 transition-colors"
-                    >
-                      <Shield className="w-3.5 h-3.5" />
-                      <span>لوحة الإدارة</span>
-                    </Link>
-                  )}
-                  <Link
-                    href="/dashboard"
-                    className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-sm hover:shadow-md hover:shadow-emerald-600/20"
-                  >
-                    <Layers className="w-4 h-4" />
-                    <span>لوحة التحكم ({profile?.full_name?.split(' ')[0] || 'حسابي'})</span>
-                  </Link>
-                  <button
-                    onClick={() => signOut()}
-                    className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                    title="تسجيل الخروج"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <Link
-                    href="/auth/login"
-                    className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2.5 sm:px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  >
-                    دخول
-                  </Link>
-                  <Link
-                    href="/auth/register"
-                    className="text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 sm:px-4 py-2 rounded-xl transition-all shadow-sm hover:shadow-md hover:shadow-emerald-600/20 active:scale-95"
-                  >
-                    ابدأ مجاناً
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* 3. HERO SECTION (Natural, warm, human-crafted) */}
-      <section className="relative pt-12 pb-20 md:pt-20 md:pb-28 overflow-hidden">
-        {/* Subtle geometric backdrop */}
-        <div className="absolute inset-0 -z-10 pointer-events-none opacity-40 dark:opacity-20">
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-emerald-200/60 to-teal-200/40 dark:from-emerald-950/40 dark:to-teal-900/30 rounded-full blur-3xl" />
-        </div>
-
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          {/* Trust Pill */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-300 text-xs font-medium mb-6">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>المنصة الأولى المصممة لإيقاع اليوم العربي</span>
-            <span className="text-emerald-600 dark:text-emerald-400 font-normal">| 22 دولة عربية</span>
-          </div>
-
-          {/* Main Title */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-[1.25] sm:leading-[1.2] mb-6">
-            نظّم يومك ومهامك بوعي وإتقان،
-            <br />
-            <span className="bg-gradient-to-l from-emerald-600 via-teal-600 to-indigo-600 bg-clip-text text-transparent">
-              وعِش إنتاجية حقيقية خالية من الفوضى
+            <span className="text-2xl font-black tracking-wider bg-gradient-to-r from-white via-cyan-200 to-cyan-400 bg-clip-text text-transparent font-cairo">
+              فكرتو
             </span>
-          </h1>
+          </Link>
 
-          {/* Subtitle */}
-          <p className="text-base sm:text-xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto mb-10 leading-relaxed font-normal">
-            تخلص من تشتت التطبيقات المعقدة وقوائم المهام المهملة. صممنا <strong className="font-semibold text-slate-900 dark:text-white">فكرتو</strong> لرواد الأعمال، المستقلين، والمهنيين في العالم العربي ليمنحك جدولاً يومياً واضحاً ومتابعة إنجاز حقيقية حتى نهاية يومك.
-          </p>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 mb-8">
-            {user ? (
-              <Link
-                href="/dashboard"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-xl text-base font-bold transition-all shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/30 active:scale-98"
-              >
-                <span>الذهاب إلى لوحة التحكم الخاصة بك</span>
-                <ArrowLeft className="w-4 h-4" />
-              </Link>
-            ) : (
-              <Link
-                href="/auth/register"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-xl text-base font-semibold transition-all shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/30 active:scale-98"
-              >
-                <span>ابدأ تنظيم يومك مجاناً</span>
-                <ArrowLeft className="w-4 h-4" />
-              </Link>
-            )}
-            <a
-              href="#demo"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 px-6 py-3.5 rounded-xl text-base font-medium border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"
-            >
-              <Zap className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>جرّب التفاعل الحي بالأسفل</span>
+          {/* روابط التصفح */}
+          <div className="hidden lg:flex items-center gap-7 text-sm font-medium text-slate-300">
+            <a href="#" className="hover:text-cyan-400 transition-colors">
+              الرئيسية
+            </a>
+            <a href="#features" className="hover:text-cyan-400 transition-colors">
+              لماذا فكرتو؟
+            </a>
+            <a href="#pricing" className="hover:text-cyan-400 transition-colors">
+              الباقات والعملات
+            </a>
+            <a href="#testimonials" className="hover:text-cyan-400 transition-colors">
+              آراء المستخدمين
+            </a>
+            <a href="#faq" className="hover:text-cyan-400 transition-colors">
+              الأسئلة الشائعة
             </a>
           </div>
 
-          {/* Value Props Strip */}
-          <div className="flex items-center justify-center gap-6 sm:gap-10 text-xs text-slate-500 dark:text-slate-400 flex-wrap pt-2">
+          {/* الأزرار وتحديد العملة */}
+          <div className="flex items-center gap-3">
+            {/* اختيار الدولة والعملة */}
+            <CurrencySelector />
+
+            {/* حالة تسجيل الدخول */}
+            {user ? (
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs font-bold hover:bg-amber-500/20 transition-all font-cairo"
+                  >
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>لوحة الإدارة</span>
+                  </Link>
+                )}
+                <Link
+                  href="/dashboard"
+                  className="px-5 py-2.5 text-xs sm:text-sm font-bold bg-gradient-to-r from-cyan-500 to-indigo-600 text-slate-950 rounded-xl shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-105 transition-all flex items-center gap-2 font-cairo"
+                >
+                  <Layers className="w-4 h-4" />
+                  <span>لوحة التحكم</span>
+                </Link>
+                <button
+                  onClick={() => signOut()}
+                  className="p-2.5 rounded-xl border border-white/10 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-colors"
+                  title="تسجيل الخروج"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Link
+                  href="/auth/login"
+                  className="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-300 hover:text-white transition-colors"
+                >
+                  دخول
+                </Link>
+                <Link
+                  href="/auth/register"
+                  className="px-5 py-2.5 text-xs sm:text-sm font-bold bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 rounded-xl shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-105 transition-all font-cairo"
+                >
+                  ابدأ مجاناً
+                </Link>
+              </div>
+            )}
+          </div>
+        </nav>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 3. محتوى الـ Hero والمركز الهولوجرامي المكاني ثلاثي الأبعاد                 */}
+      {/* ========================================================================= */}
+      <section className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center px-6 sm:px-8 mx-auto max-w-7xl py-14 sm:py-20">
+        {/* الجانب الأيمن: النصوص التسويقية البارزة */}
+        <div className="lg:col-span-5 space-y-6 text-right">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 text-xs font-semibold backdrop-blur-md shadow-[0_0_15px_rgba(34,211,238,0.15)]">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+            <span>جيل جديد من إدارة المهام المكانية</span>
+          </div>
+
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight tracking-tight font-cairo">
+            نظم يومك ومهامك{' '}
+            <span className="bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-400 bg-clip-text text-transparent drop-shadow-[0_2px_15px_rgba(34,211,238,0.25)]">
+              بوعي وإتقان
+            </span>
+          </h1>
+
+          <p className="text-slate-300 text-base sm:text-lg leading-relaxed font-medium">
+            تخلص من تشتت التطبيقات المعقدة. صممنا <strong className="text-white font-bold">«فكرتو»</strong> لتمتلك جدولاً يومياً واضحاً ومتابعة حقيقية خالية من الفوضى، مصممة لإيقاع اليوم العربي.
+          </p>
+
+          <div className="flex flex-wrap items-center gap-4 pt-2">
+            <Link
+              href={user ? '/dashboard' : '/auth/register'}
+              className="px-7 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 rounded-2xl font-black shadow-xl shadow-cyan-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 font-cairo"
+            >
+              <span>{user ? 'دخول لوحة التحكم' : 'ابدأ رحلتك الآن'}</span>
+              <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+            </Link>
+
+            {/* زر وضع التركيز التفاعلي */}
+            <button
+              type="button"
+              onClick={() => setFocusMode(!focusMode)}
+              className={`px-5 py-3.5 rounded-2xl font-bold transition-all backdrop-blur-xl flex items-center gap-2.5 border text-xs sm:text-sm font-cairo ${
+                focusMode
+                  ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_25px_rgba(34,211,238,0.35)] scale-105'
+                  : 'bg-slate-900/80 border-white/10 text-slate-300 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <span
+                className={`w-2.5 h-2.5 rounded-full ${
+                  focusMode ? 'bg-cyan-400 animate-ping' : 'bg-slate-500'
+                }`}
+              />
+              <span>{focusMode ? 'إلغاء وضع التركيز' : 'تفعيل وضع التركيز'}</span>
+            </button>
+          </div>
+
+          {/* شريط المزايا السريعة */}
+          <div className="flex items-center gap-6 pt-4 text-xs text-slate-400 font-medium">
             <div className="flex items-center gap-1.5">
-              <Check className="w-4 h-4 text-emerald-600" />
-              <span>لا يتطلب بطاقة بنكية للبدء</span>
+              <Check className="w-4 h-4 text-cyan-400" />
+              <span>بدون بطاقة بنكية للبدء</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Check className="w-4 h-4 text-emerald-600" />
-              <span>طرق دفع محلية في {currentCountry.shortName} ({currentCountry.currencySymbol})</span>
+              <Check className="w-4 h-4 text-cyan-400" />
+              <span>دعم {currentCountry.shortName} ({currentCountry.currencySymbol})</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Check className="w-4 h-4 text-emerald-600" />
-              <span>خصوصية تامة وتشفير لقاعدة بياناتك</span>
+              <Check className="w-4 h-4 text-cyan-400" />
+              <span>خصوصية وتشفير كامل</span>
             </div>
           </div>
         </div>
-      </section>
 
-      {/* 4. INTERACTIVE LIVE PRODUCT DEMO (Organic, real, touchable) */}
-      <section id="demo" className="py-12 bg-slate-100/70 dark:bg-slate-900/40 border-y border-slate-200/80 dark:border-slate-800/80">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-              تجربة حية فورية
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-1">
-              كيف يبدو يومك داخل فكرتو؟
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-              (جرّب الضغط على المهام بنفسك لمشاهدة تحديث نسبة إنجاز اليوم لحظياً!)
-            </p>
-          </div>
+        {/* الجانب الأيسر: مركز القيادة الهولوجرامي (3D Spatial Glassmorphism UI) */}
+        <div className="lg:col-span-7 relative">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className={`p-6 sm:p-8 rounded-3xl bg-slate-900/50 border backdrop-blur-2xl shadow-2xl relative overflow-hidden group transition-all duration-500 ${
+              focusMode
+                ? 'border-cyan-400 shadow-[0_0_50px_rgba(34,211,238,0.3)] ring-2 ring-cyan-400/40'
+                : 'border-white/15'
+            }`}
+          >
+            {/* تأثير إضاءة تفاعلية خلف الكارت */}
+            <div className="absolute -right-20 -top-20 w-64 h-64 bg-cyan-500/20 rounded-full blur-3xl group-hover:bg-cyan-500/30 transition-all pointer-events-none" />
 
-          {/* Interactive Mock Card */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xl overflow-hidden transition-all">
-            {/* Header of Mock */}
-            <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/70 flex items-center justify-between flex-wrap gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white">
-                    جدول اليوم: خطة التركيز والإنتاجية
-                  </h3>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  الأحد • 4 مهام مجدولة • نظام صارم لإغلاق اليوم
-                </p>
+            {/* تقويم الأسبوع الهولوجرامي */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+                <h3 className="font-black text-base sm:text-lg text-white font-cairo">
+                  المخطط الأسبوعي التفاعلي
+                </h3>
               </div>
 
-              {/* Live Completion Badge */}
-              <div className="flex items-center gap-3 bg-white dark:bg-slate-800 px-3.5 py-2 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm">
-                <div className="text-right">
-                  <div className="text-[10px] text-slate-400 font-medium">نسبة الإنجاز</div>
-                  <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
-                    {completionRate}%
-                  </div>
-                </div>
-                <div className="w-12 h-12 relative flex items-center justify-center">
-                  <svg className="w-10 h-10 -rotate-90">
+              {/* شريط الأيام السبعة */}
+              <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+                {daysList.map((day, idx) => {
+                  const isSelected = selectedDayIdx === idx
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedDayIdx(idx)}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer whitespace-nowrap font-cairo ${
+                        isSelected
+                          ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.25)]'
+                          : 'bg-slate-800/50 border-white/5 text-slate-400 hover:border-white/20 hover:text-slate-200'
+                      }`}
+                    >
+                      {day.label} {day.date}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* محتوى المهام وشريط الإنجاز الدائري المجسم */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+              {/* شريط التقدم الدائري */}
+              <div className="md:col-span-4 flex flex-col items-center justify-center p-6 bg-slate-950/60 rounded-2xl border border-white/10 shadow-inner">
+                <div className="relative w-28 h-28 flex items-center justify-center">
+                  <svg className="w-full h-full transform -rotate-90">
                     <circle
-                      cx="20"
-                      cy="20"
-                      r="16"
+                      cx="56"
+                      cy="56"
+                      r="48"
                       stroke="currentColor"
-                      strokeWidth="3.5"
-                      className="text-slate-100 dark:text-slate-700"
-                      fill="transparent"
+                      strokeWidth="8"
+                      className="text-slate-800 fill-none"
                     />
                     <circle
-                      cx="20"
-                      cy="20"
-                      r="16"
+                      cx="56"
+                      cy="56"
+                      r="48"
                       stroke="currentColor"
-                      strokeWidth="3.5"
-                      className="text-emerald-500 transition-all duration-500 ease-out"
-                      fill="transparent"
-                      strokeDasharray="100"
-                      strokeDashoffset={100 - completionRate}
+                      strokeWidth="8"
+                      className="text-cyan-400 fill-none transition-all duration-700 ease-out"
+                      strokeDasharray={301.59}
+                      strokeDashoffset={301.59 * (1 - progress / 100)}
                       strokeLinecap="round"
                     />
                   </svg>
-                  <span className="text-[10px] font-bold absolute text-slate-700 dark:text-slate-200">
-                    {completedCount}/{demoTasks.length}
-                  </span>
+                  <div className="absolute flex flex-col items-center">
+                    <span className="text-2xl font-black text-white font-cairo tracking-tight">
+                      {progress}%
+                    </span>
+                    <span className="text-[10px] text-cyan-300 font-bold -mt-1 font-mono">
+                      {completedCount}/{tasks.length}
+                    </span>
+                  </div>
                 </div>
+                <span className="text-xs text-slate-300 font-bold mt-3 font-cairo">
+                  إجمالي إنجاز اليوم
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5">
+                  (اضغط على المهام لتحديث النسبة)
+                </span>
               </div>
-            </div>
 
-            {/* Task list with live interactive clicks */}
-            <div className="p-4 sm:p-6 space-y-2.5">
-              {demoTasks.map((task) => (
-                <div
-                  key={task.id}
-                  onClick={() => toggleDemoTask(task.id)}
-                  className={`group flex items-center justify-between p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer select-none ${
-                    task.completed
-                      ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/60 dark:border-emerald-800/40 text-slate-500 dark:text-slate-400'
-                      : 'bg-white dark:bg-slate-850 hover:bg-slate-50 dark:hover:bg-slate-800/60 border-slate-200/70 dark:border-slate-800 text-slate-900 dark:text-slate-100 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'
-                  }`}
-                >
-                  <div className="flex items-center gap-3.5">
-                    <button
-                      type="button"
-                      className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${
-                        task.completed
-                          ? 'bg-emerald-600 text-white'
-                          : 'border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500'
-                      }`}
-                    >
-                      {task.completed ? (
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      ) : null}
-                    </button>
-                    <div>
+              {/* قائمة المهام التفاعلية */}
+              <div className="md:col-span-8 space-y-2.5">
+                {tasks.map((task) => (
+                  <motion.div
+                    key={task.id}
+                    whileHover={{ scale: 1.015 }}
+                    onClick={() => toggleTask(task.id)}
+                    className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer select-none transition-all ${
+                      task.completed
+                        ? 'bg-cyan-500/10 border-cyan-500/30 text-slate-400 shadow-[0_0_12px_rgba(34,211,238,0.1)]'
+                        : 'bg-slate-950/50 border-white/10 hover:border-white/20 text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className={`text-sm font-medium transition-all ${
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center border transition-colors flex-shrink-0 ${
                           task.completed
-                            ? 'line-through text-slate-400 dark:text-slate-500'
-                            : 'text-slate-800 dark:text-slate-100'
+                            ? 'bg-cyan-400 border-cyan-400 text-slate-950'
+                            : 'border-slate-600 bg-slate-900/60'
                         }`}
                       >
-                        {task.title}
+                        {task.completed && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                       </div>
-                      <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
-                        <span className="flex items-center gap-1 font-mono">
-                          <Clock className="w-3 h-3 text-slate-400" />
-                          {task.time}
+                      <div className="min-w-0">
+                        <span
+                          className={`text-xs sm:text-sm font-bold block truncate font-cairo ${
+                            task.completed ? 'line-through text-slate-500' : 'text-white'
+                          }`}
+                        >
+                          {task.title}
                         </span>
-                        <span>•</span>
-                        <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px]">
-                          {task.tag}
+                        <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1 mt-0.5">
+                          <Clock className="w-3 h-3 text-cyan-400" />
+                          {task.time}
                         </span>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Priority Tag */}
-                  <span
-                    className={`text-[11px] font-medium px-2.5 py-1 rounded-full ${
-                      task.priority === 'عاجلة'
-                        ? 'bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300'
-                        : task.priority === 'عالية'
-                        ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300'
-                        : task.priority === 'متوسطة'
-                        ? 'bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300'
-                        : 'bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300'
-                    }`}
-                  >
-                    {task.priority}
-                  </span>
-                </div>
-              ))}
+                    <span
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full border font-cairo whitespace-nowrap ${
+                        task.priority === 'عاجلة'
+                          ? 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+                          : task.priority === 'عالية'
+                          ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+                          : task.priority === 'مستمرة'
+                          ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-300'
+                          : 'bg-purple-500/15 border-purple-500/30 text-purple-300'
+                      }`}
+                    >
+                      {task.priority}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
             </div>
 
-            {/* Motivational Footer */}
-            <div className="px-5 py-3.5 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
-              <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
-                <Flame className="w-4 h-4 fill-emerald-500 text-emerald-500" />
+            {/* شريط الإحصائية التحفيزية السفلي للكارت */}
+            <div className="mt-5 pt-3.5 border-t border-white/10 flex items-center justify-between text-xs text-slate-400 font-medium">
+              <span className="flex items-center gap-1.5 text-amber-400 font-bold font-cairo">
+                <Flame className="w-4 h-4 fill-amber-400 text-amber-400" />
                 سلسلة الالتزام: 12 يوماً متتالياً 🔥
               </span>
-              <span className="text-slate-400">قاعدة فكرتو: إغلاق 100% يعني إتقان اليوم</span>
+              <span className="text-slate-400 text-[11px] font-cairo">
+                إغلاق 100% يعني إتقان اليوم
+              </span>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* 5. ARAB PAYMENT METHODS STRIP */}
-      <section className="py-10 border-b border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* ========================================================================= */}
+      {/* 4. كروت المميزات الرئيسية الثلاثة (Spatial Glass Cards)                    */}
+      {/* ========================================================================= */}
+      <section id="features" className="relative z-10 max-w-7xl mx-auto px-6 sm:px-8 py-14">
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider font-cairo">
+            بساطة مطلقة • بدون تعقيد
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-black text-white mt-2 font-cairo">
+            ثلاث ركائز تبني يومك الناجح
+          </h2>
+          <p className="text-slate-400 mt-2 text-sm sm:text-base">
+            صُممت كل ميزة لمساعدتك على الانتقال من فوضى الأفكار إلى هدوء الإنجاز الفعلي.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            {
+              title: 'إدارة مهام سهلة',
+              desc: 'أنشئ مهامك، صنفها بأولويات مرئية، وابدأ إنجازها ببساطة وسلاسة دون تعقيدات البرامج الأجنبية.',
+              icon: '🎯',
+              glow: 'cyan',
+            },
+            {
+              title: 'تنظيم ذكي للوقت',
+              desc: 'جدولك اليومي والأسبوعي في مكان واحد متناسق مع أوقات الصلاة واليوم العربي مع تنبيهات دقيقة.',
+              icon: '⏰',
+              glow: 'indigo',
+            },
+            {
+              title: 'تحقيق أهدافك واستمراريتك',
+              desc: 'حول طموحاتك إلى خطة واضحة وتابع مدارات طاقتك وسلسلة التزامك يوماً بعد يوم لتحقيق قفزات حقيقية.',
+              icon: '🚀',
+              glow: 'emerald',
+            },
+          ].map((feature, idx) => (
+            <motion.div
+              key={idx}
+              whileHover={{ y: -8, scale: 1.02 }}
+              transition={{ duration: 0.2 }}
+              className="p-7 rounded-3xl bg-slate-900/50 border border-white/10 backdrop-blur-2xl shadow-xl hover:border-cyan-500/40 hover:shadow-[0_0_30px_rgba(34,211,238,0.2)] transition-all group"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mb-5 group-hover:scale-110 transition-transform shadow-inner">
+                {feature.icon}
+              </div>
+              <h3 className="text-xl font-black mb-2 text-white font-cairo">{feature.title}</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">{feature.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 5. شريط بوابات الدفع المحلية في الوطن العربي                               */}
+      {/* ========================================================================= */}
+      <section className="relative z-10 py-10 border-y border-white/10 bg-slate-950/60 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="text-center md:text-right">
-              <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                وسائل دفع محلية موثوقة
-              </div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white mt-0.5">
-                ادفع بالعملة والوسيلة المتاحة في بلدك العربي
+              <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider font-cairo">
+                طرق دفع محلية مألوفة 🌍
+              </span>
+              <h3 className="text-base font-black text-white mt-0.5 font-cairo">
+                ادفع بالعملة والوسيلة المعتمدة في بلدك العربي بكل سهولة
               </h3>
             </div>
 
-            {/* Badges of Arab Payment gateways */}
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
               {[
                 { name: 'مدى (Mada)', flag: '🇸🇦' },
@@ -498,14 +488,13 @@ export default function HomePage() {
                 { name: 'بنفت باي (Benefit)', flag: '🇧🇭' },
                 { name: 'كليك (CliQ)', flag: '🇯🇴' },
                 { name: 'بريدي موب', flag: '🇩🇿' },
-                { name: 'Apple Pay', flag: '🌐' },
                 { name: 'تحويل بنكي مباشر', flag: '🏦' },
               ].map((method, idx) => (
                 <div
                   key={idx}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 font-medium"
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-300 font-bold font-cairo shadow-sm"
                 >
-                  <span className="text-xs">{method.flag}</span>
+                  <span className="text-sm">{method.flag}</span>
                   <span>{method.name}</span>
                 </div>
               ))}
@@ -514,489 +503,438 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 6. FEATURES (Concrete solutions to real daily problems) */}
-      <section id="features" className="py-20 md:py-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-              بساطة مطلقة • بدون تعقيد
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mt-2">
-              كل ما تحتاجه لإنجاز مهامك براحة وتركيز
-            </h2>
-            <p className="text-slate-600 dark:text-slate-300 mt-3 text-base">
-              لم نبنِ مجرد قائمة مهام عادية؛ بل نظاماً متكاملاً يساعدك على الانتقال من النية إلى التنفيذ الفعلي كل صباح.
-            </p>
-          </div>
+      {/* ========================================================================= */}
+      {/* 6. باقات الأسعار المخصصة للوطن العربي (Multi-Currency Pricing)               */}
+      {/* ========================================================================= */}
+      <section id="pricing" className="relative z-10 py-20 px-6 sm:px-8 max-w-7xl mx-auto">
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider font-cairo">
+            أسعار عادلة للوطن العربي
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-black text-white mt-2 font-cairo">
+            استثمر في إنتاجيتك واستعد وقتك
+          </h2>
+          <p className="text-slate-400 mt-2 text-sm sm:text-base">
+            الأسعار معروضة تلقائياً بـ{' '}
+            <strong className="text-cyan-300 font-bold">
+              {currentCountry.currencyName} ({currentCountry.flag} {currentCountry.shortName})
+            </strong>
+            . يمكنك تغيير الدولة من الزاوية العلوية متى شئت.
+          </p>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Feature 1 */}
-            <div className="bg-white dark:bg-slate-900 p-7 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-5">
-                <Calendar className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                جداول مرنة تناسب نمط حياتك
-              </h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                أنشئ جداول يومية أو أسبوعية أو شهرية أو مخصصة. تدعم أسبوع العمل العربي وتراعي توازنك بين العمل، العائلة، وحياتك الشخصية.
-              </p>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="bg-white dark:bg-slate-900 p-7 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-5">
-                <Flame className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                سلسلة الالتزام (Streaks) لليوم الكامل
-              </h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                لا نمنحك إنجاز اليوم إلا إذا أتممت 100% من مهامك الفعلية. هذا النظام الصارم يحفزك نفسياً على عدم تأجيل المهام ويصنع عادات لا تنكسر.
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="bg-white dark:bg-slate-900 p-7 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-5">
-                <BarChart3 className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                إحصائيات واضحة ومباشرة
-              </h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                اعرف أين تذهب ساعات يومك. تقارير أسبوعية وشهرية توضح معدل إنجازك الفعلي، الأيام الأكثر إنتاجية، ونقاط التحسين.
-              </p>
-            </div>
-
-            {/* Feature 4 */}
-            <div className="bg-white dark:bg-slate-900 p-7 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-5">
-                <Smartphone className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                سريع ومتوافق مع الهاتف والحاسوب
-              </h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                تصفح سلس وسريع جداً على شاشات الجوال بدون تطبيقات ثقيلة أو استهلاك للبطارية. بياناتك متزامنة لحظياً على كل أجهزتك.
-              </p>
-            </div>
-
-            {/* Feature 5 */}
-            <div className="bg-white dark:bg-slate-900 p-7 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-12 h-12 rounded-2xl bg-teal-100 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center mb-5">
-                <Wallet className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                دفع يدوي شفاف بدون خصم تلقائي
-              </h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                لا نربط بطاقتك بخصم شهري إجباري مفاجئ. ادفع بالطريقة المحلية المفضلة لديك وارفع الإيصال ليتم تفعيل حسابك مباشرة.
-              </p>
-            </div>
-
-            {/* Feature 6 */}
-            <div className="bg-white dark:bg-slate-900 p-7 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-5">
-                <ShieldCheck className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                أمان كامل وخصوصية فائقة
-              </h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                مهامك ومعلوماتك الشخصية محمية بسياسات أمان صارمة (RLS). لا نشارك أي بيانات ولا نضع إعلانات مزعجة أبداً.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 7. DYNAMIC MULTI-CURRENCY PRICING SECTION */}
-      <section id="pricing" className="py-20 bg-slate-100/70 dark:bg-slate-900/50 border-y border-slate-200/80 dark:border-slate-800/80">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-              أسعار عادلة للوطن العربي
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mt-2">
-              استثمر في إنتاجيتك واستعد وقتك
-            </h2>
-            <p className="text-slate-600 dark:text-slate-300 mt-2 text-sm sm:text-base">
-              الأسعار معروضة تلقائياً بـ{' '}
-              <strong className="text-emerald-700 dark:text-emerald-400 font-semibold">
-                {currentCountry.currencyName} ({currentCountry.flag} {currentCountry.shortName})
-              </strong>
-              . يمكنك تغيير الدولة من الزاوية العلوية متى شئت.
-            </p>
-
-            {/* Billing Toggle (Monthly / Yearly) */}
-            <div className="mt-8 inline-flex items-center gap-3 p-1.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
-              <button
-                type="button"
-                onClick={() => setIsYearly(false)}
-                className={`px-5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                  !isYearly
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                اشتراك شهري
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsYearly(true)}
-                className={`relative px-5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                  isYearly
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                اشتراك سنوي
-                <span className="absolute -top-2.5 -left-2 bg-amber-500 text-slate-950 font-bold text-[10px] px-2 py-0.5 rounded-full shadow-sm">
-                  وفر 40%
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* Pricing Cards */}
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* Monthly Card */}
-            <div
-              className={`bg-white dark:bg-slate-900 rounded-3xl p-8 border transition-all ${
+          {/* محول الاشتراك السنوي / الشهري */}
+          <div className="mt-8 inline-flex items-center gap-3 p-1.5 rounded-2xl bg-slate-900/80 border border-white/15 backdrop-blur-xl shadow-lg">
+            <button
+              type="button"
+              onClick={() => setIsYearly(false)}
+              className={`px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer font-cairo ${
                 !isYearly
-                  ? 'border-emerald-500 ring-2 ring-emerald-500/20 shadow-xl'
-                  : 'border-slate-200 dark:border-slate-800 shadow-sm'
+                  ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
+              اشتراك شهري
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsYearly(true)}
+              className={`relative px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer font-cairo ${
+                isYearly
+                  ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              اشتراك سنوي
+              <span className="absolute -top-2.5 -left-2 bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full shadow-md font-mono">
+                وفر 40%
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* كروت الأسعار الزجاجية المكانية */}
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          {/* كارت الاشتراك الشهري */}
+          <div
+            className={`rounded-3xl p-8 backdrop-blur-2xl transition-all flex flex-col justify-between border ${
+              !isYearly
+                ? 'bg-slate-900/70 border-cyan-400 shadow-[0_0_35px_rgba(34,211,238,0.25)] ring-1 ring-cyan-400/50'
+                : 'bg-slate-900/40 border-white/10 shadow-xl'
+            }`}
+          >
+            <div>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white">الخطة الشهرية</h3>
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                <h3 className="text-xl font-black text-white font-cairo">الخطة الشهرية</h3>
+                <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-800 text-slate-300 border border-white/10 font-cairo">
                   مرونة كاملة
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-6">
+              <p className="text-xs sm:text-sm text-slate-400 mb-6 font-medium">
                 مناسبة للبدء وتجربة النظام بدون التزام طويل الأمد.
               </p>
 
               <div className="mb-6 flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold text-slate-900 dark:text-white">
+                <span className="text-4xl font-black text-white font-cairo">
                   {formatPrice(currentCountry.monthlyPrice)}
                 </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400">/ شهرياً</span>
+                <span className="text-xs text-slate-400 font-cairo">/ شهرياً</span>
               </div>
 
-              <ul className="space-y-3 mb-8 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+              <ul className="space-y-3 mb-8 text-xs sm:text-sm text-slate-300 font-medium">
                 <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <Check className="w-4 h-4 text-cyan-400 flex-shrink-0" />
                   <span>جداول مهام غير محدودة (يومي، أسبوعي، شهري)</span>
                 </li>
                 <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                  <span>تتبع سلسلة الاستمرارية ومعدل الإنجاز اليومي</span>
+                  <Check className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                  <span>تتبع سلسلة الاستمرارية ونواة الطاقة المكانية</span>
                 </li>
                 <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <Check className="w-4 h-4 text-cyan-400 flex-shrink-0" />
                   <span>تقارير ورسوم بيانية أسبوعية للأداء</span>
                 </li>
                 <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <Check className="w-4 h-4 text-cyan-400 flex-shrink-0" />
                   <span>دعم طرق الدفع المحلية في {currentCountry.shortName}</span>
                 </li>
               </ul>
-
-              <Link
-                href="/auth/register"
-                className="w-full block text-center py-3 rounded-xl border-2 border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-semibold transition-all"
-              >
-                ابدأ باشتراك شهري
-              </Link>
             </div>
 
-            {/* Yearly Card (Featured) */}
-            <div
-              className={`relative bg-gradient-to-b from-emerald-900 via-slate-900 to-slate-950 text-white rounded-3xl p-8 border border-emerald-700/60 shadow-2xl transition-all ${
-                isYearly ? 'ring-2 ring-emerald-400' : ''
-              }`}
+            <Link
+              href="/auth/register"
+              className="w-full block text-center py-3.5 rounded-xl border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10 font-bold transition-all font-cairo shadow-sm"
             >
-              <div className="absolute -top-3.5 right-8 bg-amber-400 text-slate-950 text-xs font-bold px-3.5 py-1 rounded-full shadow-md flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
-                <span>الخيار الأكثر شعبية في الوطن العربي</span>
-              </div>
+              ابدأ باشتراك شهري
+            </Link>
+          </div>
 
+          {/* كارت الاشتراك السنوي (المميز) */}
+          <div
+            className={`relative rounded-3xl p-8 backdrop-blur-2xl transition-all flex flex-col justify-between border ${
+              isYearly
+                ? 'bg-gradient-to-b from-cyan-950/40 via-slate-900/80 to-slate-950 border-cyan-400 shadow-[0_0_40px_rgba(34,211,238,0.3)] ring-1 ring-cyan-400/50'
+                : 'bg-slate-900/40 border-white/10 shadow-xl'
+            }`}
+          >
+            <div className="absolute -top-3.5 right-8 bg-amber-400 text-slate-950 text-xs font-black px-4 py-1 rounded-full shadow-lg flex items-center gap-1.5 font-cairo">
+              <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
+              <span>الخيار الأكثر شعبية في الوطن العربي</span>
+            </div>
+
+            <div>
               <div className="flex items-center justify-between mb-4 mt-2">
-                <h3 className="text-xl font-bold text-white">الخطة السنوية</h3>
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <h3 className="text-xl font-black text-white font-cairo">الخطة السنوية</h3>
+                <span className="text-xs font-bold px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-cairo">
                   وفر 40%
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-slate-300 mb-6">
+              <p className="text-xs sm:text-sm text-slate-300 mb-6 font-medium">
                 أفضل استثمار لعام كامل من الالتزام والإنتاجية العالية.
               </p>
 
               <div className="mb-6">
                 <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold text-white">
+                  <span className="text-4xl font-black text-white font-cairo">
                     {formatPrice(currentCountry.yearlyPrice)}
                   </span>
-                  <span className="text-xs text-slate-300">/ سنوياً</span>
+                  <span className="text-xs text-slate-400 font-cairo">/ سنوياً</span>
                 </div>
-                <div className="text-[11px] text-emerald-400 mt-1">
+                <div className="text-[11px] text-cyan-400 mt-1 font-mono">
                   (يعادل تقريباً {formatPrice(Math.round(currentCountry.yearlyPrice / 12))} شهرياً فقط!)
                 </div>
               </div>
 
-              <ul className="space-y-3 mb-8 text-xs sm:text-sm text-slate-200">
+              <ul className="space-y-3 mb-8 text-xs sm:text-sm text-slate-200 font-medium">
                 <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <Check className="w-4 h-4 text-cyan-400 flex-shrink-0" />
                   <span>كافة مميزات الاشتراك الشهري بالكامل</span>
                 </li>
                 <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <Check className="w-4 h-4 text-cyan-400 flex-shrink-0" />
                   <span>توفير يعادل ما يقارب 5 أشهر مجانية</span>
                 </li>
                 <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <Check className="w-4 h-4 text-cyan-400 flex-shrink-0" />
                   <span>أولوية التفعيل الفوري لإيصال التحويل</span>
                 </li>
                 <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  <span>أولوية قصوى في الدعم الفني والميزات الجديدة</span>
+                  <Check className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                  <span>أولوية قصوى في الدعم الفني عبر الواتساب</span>
                 </li>
               </ul>
-
-              <Link
-                href="/auth/register"
-                className="w-full block text-center py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold transition-all shadow-lg shadow-emerald-500/25 active:scale-98"
-              >
-                اختر الخطة السنوية الآن
-              </Link>
             </div>
-          </div>
 
-          {/* Local Country Help Box */}
-          <div className="mt-10 p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 text-xs sm:text-sm text-slate-600 dark:text-slate-300 flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">{currentCountry.flag}</span>
-              <div>
-                <strong className="text-slate-900 dark:text-white block">
-                  طرق الدفع المتاحة في {currentCountry.name}:
-                </strong>
-                <span className="text-slate-500 dark:text-slate-400">
-                  {currentCountry.paymentMethods.join(' • ')}
-                </span>
-              </div>
-            </div>
             <Link
               href="/auth/register"
-              className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+              className="w-full block text-center py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-slate-950 font-black transition-all shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-105 active:scale-95 font-cairo"
             >
-              <span>سجل حسابك للدفع المحلي</span>
-              <ArrowLeft className="w-3.5 h-3.5" />
+              اختر الخطة السنوية الآن
+            </Link>
+          </div>
+        </div>
+
+        {/* صندوق المساعدة بالدفع المحلي في بلد المستخدم */}
+        <div className="mt-10 p-5 rounded-2xl bg-slate-900/60 border border-white/10 backdrop-blur-xl text-xs sm:text-sm text-slate-300 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">{currentCountry.flag}</span>
+            <div>
+              <strong className="text-white block font-cairo">
+                طرق الدفع المتاحة في {currentCountry.name}:
+              </strong>
+              <span className="text-slate-400 text-xs">
+                {currentCountry.paymentMethods.join(' • ')}
+              </span>
+            </div>
+          </div>
+          <Link
+            href="/auth/register"
+            className="text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-cairo"
+          >
+            <span>سجل حسابك للدفع المحلي</span>
+            <ArrowLeft className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 7. تجارب وآراء المستخدمين (Testimonials)                                    */}
+      {/* ========================================================================= */}
+      <section id="testimonials" className="relative z-10 py-16 px-6 sm:px-8 max-w-7xl mx-auto">
+        <div className="text-center max-w-2xl mx-auto mb-14">
+          <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider font-cairo">
+            قصص نجاح من قلب العالم العربي
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-black text-white mt-2 font-cairo">
+            ماذا يقول مستخدمو فكرتو؟
+          </h2>
+          <p className="text-slate-400 mt-2 text-sm sm:text-base">
+            تجارب حقيقية لمهنيين ورواد أعمال استعادوا السيطرة على أوقاتهم.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            {
+              name: 'م. أحمد العتيبي',
+              role: 'مؤسس متجر إلكتروني ومطور',
+              city: 'الرياض، السعودية 🇸🇦',
+              quote:
+                'غيّرت فكرتو طريقة تخطيطي لأسبوع العمل تماماً. الواجهة ثلاثية الأبعاد ممتازة، سريعة، والدفع عبر مدى وSTC Pay سلس جداً.',
+            },
+            {
+              name: 'سلمى الشناوي',
+              role: 'مديرة تسويق ومستشارة نمو',
+              city: 'القاهرة، مصر 🇪🇬',
+              quote:
+                'كنت مشتتة بين 3 تطبيقات أجنبية. ميزة نسبة إنجاز اليوم وسلسلة الاستمرارية خلتني أركز على إتمام المهام الفعلية بدل كتابتها فقط.',
+            },
+            {
+              name: 'عمر المنصوري',
+              role: 'مدير مشاريع ريادية',
+              city: 'دبي، الإمارات 🇦🇪',
+              quote:
+                'التصميم المكاني ثلاثي الأبعاد والخط العربي المريح يعطيك راحة نفسية أثناء العمل. أفضل استثمار سنوي قمت به هذا العام.',
+            },
+            {
+              name: 'د. يوسف التازي',
+              role: 'كاتب ومصمم منتجات رقمية',
+              city: 'الدار البيضاء، المغرب 🇲🇦',
+              quote:
+                'فخور بوجود منصة عربية بهذه الجودة العالمية الفائقة. تشعر أنها بنيت بعناية شديدة لاحتياجاتنا وثقافتنا.',
+            },
+          ].map((item, idx) => (
+            <div
+              key={idx}
+              className="bg-slate-900/50 p-6 rounded-3xl border border-white/10 backdrop-blur-xl shadow-xl flex flex-col justify-between hover:border-cyan-500/30 transition-all"
+            >
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6 font-medium">
+                "{item.quote}"
+              </p>
+              <div className="border-t border-white/10 pt-4">
+                <div className="font-bold text-sm text-white font-cairo">{item.name}</div>
+                <div className="text-[11px] text-slate-400">{item.role}</div>
+                <div className="text-[11px] text-cyan-400 font-bold mt-0.5">{item.city}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 8. الأسئلة الشائعة (FAQ Accordion)                                       */}
+      {/* ========================================================================= */}
+      <section id="faq" className="relative z-10 py-16 px-6 sm:px-8 max-w-3xl mx-auto">
+        <div className="text-center mb-12">
+          <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider font-cairo">
+            إجابات واضحة
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-black text-white mt-1 font-cairo">
+            الأسئلة الشائعة
+          </h2>
+        </div>
+
+        <div className="space-y-3">
+          {faqs.map((faq, index) => {
+            const isOpen = openFaq === index
+            return (
+              <div
+                key={index}
+                className="bg-slate-900/50 rounded-2xl border border-white/10 backdrop-blur-xl overflow-hidden transition-colors shadow-lg"
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenFaq(isOpen ? null : index)}
+                  className="w-full flex items-center justify-between p-4 sm:p-5 text-right font-bold text-sm sm:text-base text-white cursor-pointer font-cairo"
+                >
+                  <span>{faq.q}</span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-cyan-400 transition-transform duration-200 flex-shrink-0 mr-3 ${
+                      isOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+                {isOpen && (
+                  <div className="px-5 pb-5 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-white/10 pt-3">
+                    {faq.a}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 9. بانر الدعوة لاتخاذ القرار (Final Call to Action)                       */}
+      {/* ========================================================================= */}
+      <section className="relative z-10 py-16 px-6 sm:px-8 max-w-4xl mx-auto text-center">
+        <div className="bg-gradient-to-tr from-cyan-950/60 via-slate-900/90 to-indigo-950/60 text-white rounded-3xl p-10 sm:p-14 border border-cyan-500/30 shadow-[0_0_50px_rgba(34,211,238,0.2)] relative overflow-hidden backdrop-blur-2xl">
+          <div className="relative z-10 max-w-2xl mx-auto">
+            <span className="inline-block px-3.5 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-bold mb-4 border border-cyan-500/40 font-cairo">
+              ابدأ رحلة الإنجاز اليوم
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-black text-white mb-4 font-cairo">
+              توقف عن تأجيل أهدافك وابدأ بتنظيم يومك الآن
+            </h2>
+            <p className="text-slate-300 text-sm sm:text-base mb-8 font-medium">
+              انضم إلى نخبة من رواد الأعمال والمهنيين العرب الذين حوّلوا ساعات يومهم إلى إنجازات ملموسة وراحة بال حقيقية.
+            </p>
+            <Link
+              href="/auth/register"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-black px-8 py-4 rounded-xl text-base transition-all shadow-xl shadow-cyan-500/30 hover:scale-105 active:scale-95 font-cairo"
+            >
+              <span>إنشاء حسابك مجاناً</span>
+              <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* 8. TESTIMONIALS (Authentic Arab Voices from Real Arab Cities) */}
-      <section id="testimonials" className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-              قصص نجاح من قلب العالم العربي
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mt-2">
-              ماذا يقول مستخدمو فكرتو؟
-            </h2>
-            <p className="text-slate-600 dark:text-slate-400 mt-2 text-sm sm:text-base">
-              تجارب حقيقية لمهنيين ورواد أعمال استعادوا السيطرة على أوقاتهم.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              {
-                name: 'م. أحمد العتيبي',
-                role: 'مؤسس متجر إلكتروني ومطور',
-                city: 'الرياض، السعودية 🇸🇦',
-                quote:
-                  'غيّرت فكرتو طريقة تخطيطي لأسبوع العمل تماماً. الواجهة سريعة، بدون بهرجة مزعجة، والدفع عبر مدى وSTC Pay سهل جداً.',
-              },
-              {
-                name: 'سلمى الشناوي',
-                role: 'مديرة تسويق ومستشارة نمو',
-                city: 'القاهرة، مصر 🇪🇬',
-                quote:
-                  'كنت مشتتة بين 3 تطبيقات أجنبية. ميزة نسبة إنجاز اليوم وسلسلة الاستمرارية خلتني أركز على إتمام المهام الفعلية بدل كتابتها فقط. والدفع بإنستاباي كان سريعاً.',
-              },
-              {
-                name: 'عمر المنصوري',
-                role: 'مدير مشاريع ريادية',
-                city: 'دبي، الإمارات 🇦🇪',
-                quote:
-                  'التصميم الهادئ والخط العربي الواضح يعطيك راحة نفسية أثناء العمل. أفضل استثمار سنوي قمت به هذا العام.',
-              },
-              {
-                name: 'د. يوسف التازي',
-                role: 'كاتب ومصمم منتجات رقمية',
-                city: 'الدار البيضاء، المغرب 🇲🇦',
-                quote:
-                  'فخور بوجود منصة عربية بهذه الجودة العالية. لا تشعر أنها قالب جاهز، بل منتج صُمم بعناية لاحتياجاتنا الحقيقية.',
-              },
-            ].map((item, idx) => (
-              <div
-                key={idx}
-                className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between"
-              >
-                <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-6 font-normal">
-                  "{item.quote}"
-                </p>
-                <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
-                  <div className="font-bold text-sm text-slate-900 dark:text-white">
-                    {item.name}
-                  </div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                    {item.role}
-                  </div>
-                  <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
-                    {item.city}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 9. FAQ ACCORDION (Real Answers) */}
-      <section id="faq" className="py-20 bg-slate-100/60 dark:bg-slate-900/40 border-t border-slate-200/80 dark:border-slate-800/80">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-              إجابات واضحة
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">
-              الأسئلة الشائعة
-            </h2>
-          </div>
-
-          <div className="space-y-3">
-            {faqs.map((faq, index) => {
-              const isOpen = openFaq === index
-              return (
-                <div
-                  key={index}
-                  className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-sm transition-colors"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setOpenFaq(isOpen ? null : index)}
-                    className="w-full flex items-center justify-between p-4 sm:p-5 text-right font-semibold text-sm sm:text-base text-slate-900 dark:text-white cursor-pointer"
-                  >
-                    <span>{faq.q}</span>
-                    <ChevronDown
-                      className={`w-4 h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 mr-3 ${
-                        isOpen ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </button>
-                  {isOpen && (
-                    <div className="px-5 pb-5 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed border-t border-slate-100 dark:border-slate-800/60 pt-3">
-                      {faq.a}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* 10. FINAL CALL TO ACTION */}
-      <section className="py-20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="bg-gradient-to-tr from-emerald-900 via-slate-900 to-teal-950 text-white rounded-3xl p-10 sm:p-14 border border-emerald-800/50 shadow-2xl relative overflow-hidden">
-            <div className="relative z-10 max-w-2xl mx-auto">
-              <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold mb-4 border border-emerald-500/30">
-                ابدأ رحلة الإنجاز اليوم
-              </span>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
-                توقف عن تأجيل أهدافك وابدأ بتنظيم يومك الآن
-              </h2>
-              <p className="text-slate-300 text-sm sm:text-base mb-8">
-                انضم إلى نخبة من المهنيين العرب الذين حوّلوا ساعات يومهم إلى إنجازات ملموسة وراحة بال حقيقية.
-              </p>
-              <Link
-                href="/auth/register"
-                className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-8 py-4 rounded-xl text-base transition-all shadow-xl shadow-emerald-500/25 active:scale-95"
-              >
-                <span>إنشاء حسابك مجاناً</span>
-                <ArrowLeft className="w-5 h-5" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 11. FOOTER (With country flags and legal links) */}
-      <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 py-12 text-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* ========================================================================= */}
+      {/* 10. الفوتر الزجاجي مع أعلام الدول العربية وروابط المنصة                     */}
+      {/* ========================================================================= */}
+      <footer className="relative z-10 border-t border-white/10 bg-slate-950/80 backdrop-blur-xl py-12 text-xs">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
-            {/* Col 1: Brand */}
+            {/* العمود 1: الشعار والوصف */}
             <div className="col-span-2">
               <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white">
-                  <Layers className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-500 flex items-center justify-center text-slate-950 font-black">
+                  ف
                 </div>
-                <span className="text-base font-bold text-slate-900 dark:text-white">فكرتو</span>
+                <span className="text-base font-black text-white font-cairo">فكرتو (Fekrto)</span>
               </div>
-              <p className="text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed mb-4">
-                منصة عربية رائدة لتنظيم الوقت والمهام اليومية وفق أعلى معايير الجودة والخصوصية، مع دعم كامل لكافة دول الوطن العربي.
+              <p className="text-slate-400 max-w-sm leading-relaxed mb-4 font-medium">
+                منصة عربية رائدة لتنظيم الوقت وإدارة المهام المكانية ثلاثية الأبعاد، مع دعم كامل للعملات المحلية في 22 دولة عربية.
               </p>
               <div className="flex items-center gap-2">
                 <CurrencySelector />
               </div>
             </div>
 
-            {/* Col 2 */}
+            {/* العمود 2: روابط المنصة */}
             <div>
-              <h4 className="font-semibold text-slate-900 dark:text-white mb-3">المنصة</h4>
-              <ul className="space-y-2 text-slate-500 dark:text-slate-400">
-                <li><a href="#demo" className="hover:text-emerald-600 transition-colors">التجربة التفاعلية</a></li>
-                <li><a href="#features" className="hover:text-emerald-600 transition-colors">المميزات</a></li>
-                <li><a href="#pricing" className="hover:text-emerald-600 transition-colors">الأسعار والعملات</a></li>
-                <li><a href="#testimonials" className="hover:text-emerald-600 transition-colors">تجارب المستخدمين</a></li>
+              <h4 className="font-bold text-white mb-3 font-cairo">المنصة</h4>
+              <ul className="space-y-2 text-slate-400">
+                <li>
+                  <a href="#features" className="hover:text-cyan-400 transition-colors">
+                    المميزات
+                  </a>
+                </li>
+                <li>
+                  <a href="#pricing" className="hover:text-cyan-400 transition-colors">
+                    الأسعار والعملات
+                  </a>
+                </li>
+                <li>
+                  <a href="#testimonials" className="hover:text-cyan-400 transition-colors">
+                    تجارب المستخدمين
+                  </a>
+                </li>
+                <li>
+                  <a href="#faq" className="hover:text-cyan-400 transition-colors">
+                    الأسئلة الشائعة
+                  </a>
+                </li>
               </ul>
             </div>
 
-            {/* Col 3 */}
+            {/* العمود 3: عن فكرتو */}
             <div>
-              <h4 className="font-semibold text-slate-900 dark:text-white mb-3">عن فكرتو</h4>
-              <ul className="space-y-2 text-slate-500 dark:text-slate-400">
-                <li><Link href="/about" className="hover:text-emerald-600 transition-colors">من نحن</Link></li>
-                <li><Link href="/faq" className="hover:text-emerald-600 transition-colors">الأسئلة الشائعة</Link></li>
-                <li><Link href="/contact" className="hover:text-emerald-600 transition-colors">اتصل بنا</Link></li>
+              <h4 className="font-bold text-white mb-3 font-cairo">عن فكرتو</h4>
+              <ul className="space-y-2 text-slate-400">
+                <li>
+                  <Link href="/about" className="hover:text-cyan-400 transition-colors">
+                    من نحن
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/faq" className="hover:text-cyan-400 transition-colors">
+                    الأسئلة الشائعة
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="hover:text-cyan-400 transition-colors">
+                    اتصل بنا
+                  </Link>
+                </li>
               </ul>
             </div>
 
-            {/* Col 4 */}
+            {/* العمود 4: الشروط القانونية */}
             <div>
-              <h4 className="font-semibold text-slate-900 dark:text-white mb-3">الشروط والقانونية</h4>
-              <ul className="space-y-2 text-slate-500 dark:text-slate-400">
-                <li><Link href="/terms" className="hover:text-emerald-600 transition-colors">شروط الاستخدام</Link></li>
-                <li><Link href="/privacy" className="hover:text-emerald-600 transition-colors">سياسة الخصوصية</Link></li>
-                <li><Link href="/refund-policy" className="hover:text-emerald-600 transition-colors">سياسة الاسترجاع</Link></li>
-                <li><Link href="/disclaimer" className="hover:text-emerald-600 transition-colors">إخلاء المسؤولية</Link></li>
+              <h4 className="font-bold text-white mb-3 font-cairo">الشروط والقانونية</h4>
+              <ul className="space-y-2 text-slate-400">
+                <li>
+                  <Link href="/terms" className="hover:text-cyan-400 transition-colors">
+                    شروط الاستخدام
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/privacy" className="hover:text-cyan-400 transition-colors">
+                    سياسة الخصوصية
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/refund-policy" className="hover:text-cyan-400 transition-colors">
+                    سياسة الاسترجاع
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/disclaimer" className="hover:text-cyan-400 transition-colors">
+                    إخلاء المسؤولية
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>
 
-          {/* Arab Countries Flags Bar */}
-          <div className="pt-8 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-400">
+          {/* شريط أعلام الدول العربية وحقوق النشر */}
+          <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-400">
             <div className="text-center sm:text-right">
               © {new Date().getFullYear()} فكرتو (Fekrto). صُنع بكل إتقان للمستخدم العربي في كافة الأقطار العربية ❤️
             </div>
-            <div className="flex items-center gap-1.5 text-base" title="نخدم كافة الدول العربية">
+            <div className="flex items-center gap-1.5 text-base flex-wrap justify-center" title="نخدم كافة الدول العربية">
               <span>🇸🇦</span>
               <span>🇪🇬</span>
               <span>🇦🇪</span>
@@ -1018,6 +956,6 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
-    </div>
+    </main>
   )
 }
