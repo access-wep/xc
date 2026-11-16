@@ -4,13 +4,11 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Button, Input, Card } from '@/components/ui'
-import { useTheme } from '@/contexts/ThemeContext'
-import { Sparkles, Mail, Lock, AlertCircle, ArrowLeft } from 'lucide-react'
+import { Button, Input } from '@/components/ui'
+import { Sparkles, Mail, Lock, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { theme, toggleTheme } = useTheme()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -41,7 +39,6 @@ export default function LoginPage() {
       }
 
       if (data?.user) {
-        // Check user role to redirect appropriately
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')
@@ -80,52 +77,80 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gray-50/50 dark:bg-gray-950 relative overflow-hidden">
-      {/* Background Glow */}
-      <div className="absolute top-1/4 -right-20 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -left-20 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Top Header */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-6">
-        <Link href="/" className="inline-flex items-center gap-2 mb-4 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-l from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform">
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-2xl font-bold bg-gradient-to-l from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-            فكرتو
-          </span>
-        </Link>
-        <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-          تسجيل الدخول إلى حسابك
-        </h2>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          أو{' '}
-          <Link
-            href="/auth/register"
-            className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 underline underline-offset-4"
-          >
-            إنشاء حساب جديد في دقائق
-          </Link>
-        </p>
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[#020617] text-white relative overflow-hidden font-cairo rtl selection:bg-emerald-500 selection:text-slate-950">
+      {/* Background Cosmic Deep Space Glow */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-1/4 -right-20 w-96 h-96 bg-emerald-600/15 rounded-full blur-[130px] animate-pulse" />
+        <div className="absolute bottom-1/4 -left-20 w-96 h-96 bg-purple-600/15 rounded-full blur-[130px] animate-pulse delay-1000" />
+        <div className="absolute inset-0 bg-[radial-gradient(#34d399_1px,transparent_1px)] [background-size:48px_48px] opacity-15" />
       </div>
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
-        <Card className="p-8 shadow-xl border-gray-100 dark:border-gray-800">
+      <div className="relative z-10 w-full max-w-4xl grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+        
+        {/* Right Side: Decorative Motivation Panel (Matching Top-Middle of Mockup) */}
+        <div className="hidden md:flex md:col-span-5 flex-col justify-between p-8 rounded-3xl bg-gradient-to-b from-emerald-950/40 via-slate-900/60 to-slate-950/80 border border-emerald-500/30 backdrop-blur-2xl shadow-[0_12px_48px_rgba(0,0,0,0.7)] h-full min-h-[460px] text-right">
+          <div className="space-y-4">
+            {/* Logo */}
+            <Link href="/" className="inline-flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-slate-950 font-black shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+                ف
+              </div>
+              <span className="font-black text-xl text-white">فكرتو FEKRTO</span>
+            </Link>
+
+            <div className="pt-8 space-y-2">
+              <span className="text-2xl font-black text-white block">أهدافك</span>
+              <span className="text-2xl font-black text-emerald-300 block">خططك</span>
+              <span className="text-2xl font-black text-cyan-300 block">إنجازاتك</span>
+            </div>
+            
+            <p className="text-xs text-gray-400 leading-relaxed pt-2">
+              تابع نموك اليومي وسلاسل الالتزام الخاصة بك في واجهة ثلاثية الأبعاد تفاعلية.
+            </p>
+          </div>
+
+          <div className="pt-6 border-t border-white/10 space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold text-gray-300">
+              <span>نسبة الجاهزية</span>
+              <span className="text-emerald-400 font-mono">100%</span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full w-full shadow-[0_0_8px_#10b981]" />
+            </div>
+            <span className="text-[10px] text-gray-500 block text-left">ابدأ الآن...</span>
+          </div>
+        </div>
+
+        {/* Left Side: The Glassmorphic Auth Form (Matching Mockup) */}
+        <div className="md:col-span-7 p-6 sm:p-9 rounded-3xl bg-slate-900/70 border border-emerald-500/30 backdrop-blur-2xl shadow-[0_12px_48px_rgba(0,0,0,0.8)] space-y-6">
+          <div className="text-right space-y-2">
+            <div className="md:hidden flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-slate-950 font-black">
+                ف
+              </div>
+              <span className="font-black text-lg text-white">فكرتو</span>
+            </div>
+            <h2 className="text-2xl font-black text-white">مرحباً بك مجدداً</h2>
+            <p className="text-xs sm:text-sm text-gray-400">
+              سعيد بعودتك، لنكمل رحلتك نحو الإنجاز.
+            </p>
+          </div>
+
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 text-red-700 dark:text-red-400 text-sm flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-500" />
+            <div className="p-3.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-400" />
               <span>{error}</span>
             </div>
           )}
 
-          {/* Google Login Button */}
+          {/* Google Sign In Button */}
           <button
             type="button"
             onClick={handleGoogleLogin}
             disabled={isGoogleLoading || isLoading}
-            className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-800/70 transition-colors shadow-sm mb-6 cursor-pointer"
+            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-white/10 bg-slate-950/80 hover:bg-slate-900 text-gray-200 text-xs font-bold transition-all shadow-md cursor-pointer"
           >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -143,39 +168,39 @@ export default function LoginPage() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            <span>{isGoogleLoading ? 'جاري التحويل...' : 'المتابعة باستخدام Google'}</span>
+            <span>{isGoogleLoading ? 'جاري التحويل...' : 'تسجيل الدخول باستخدام Google'}</span>
           </button>
 
-          <div className="relative mb-6">
+          <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200 dark:border-gray-800" />
+              <div className="w-full border-t border-white/10" />
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white dark:bg-gray-900 px-3 text-gray-500 dark:text-gray-400">
-                أو باستخدام البريد الإلكتروني
-              </span>
+            <div className="relative flex justify-center text-[10px] uppercase">
+              <span className="bg-slate-900 px-3 text-gray-500">أو عبر البريد الإلكتروني</span>
             </div>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
-            <Input
-              label="البريد الإلكتروني"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="example@mail.com"
-              icon={<Mail className="w-4 h-4" />}
-            />
+            <div>
+              <label className="block text-xs font-bold text-gray-300 mb-1.5 text-right">
+                البريد الإلكتروني أو رقم الهاتف
+              </label>
+              <Input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="example@mail.com"
+                icon={<Mail className="w-4 h-4 text-emerald-400" />}
+              />
+            </div>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  كلمة المرور
-                </label>
+                <label className="block text-xs font-bold text-gray-300">كلمة المرور</label>
                 <Link
                   href="/auth/forgot-password"
-                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+                  className="text-[11px] text-emerald-400 hover:underline"
                 >
                   نسيت كلمة المرور؟
                 </Link>
@@ -186,7 +211,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                icon={<Lock className="w-4 h-4" />}
+                icon={<Lock className="w-4 h-4 text-emerald-400" />}
               />
             </div>
 
@@ -196,23 +221,23 @@ export default function LoginPage() {
               fullWidth
               size="lg"
               isLoading={isLoading}
-              className="mt-2"
+              className="mt-3 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 text-slate-950 font-black shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:shadow-[0_0_30px_rgba(16,185,129,0.6)]"
             >
               تسجيل الدخول
             </Button>
           </form>
-        </Card>
 
-        {/* Back Link */}
-        <div className="mt-6 text-center">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>العودة إلى الصفحة الرئيسية</span>
-          </Link>
+          <div className="pt-2 text-center text-xs text-gray-400">
+            <span>ليس لديك حساب؟ </span>
+            <Link
+              href="/auth/register"
+              className="font-bold text-emerald-400 hover:text-emerald-300 underline underline-offset-4"
+            >
+              إنشاء حساب جديد
+            </Link>
+          </div>
         </div>
+
       </div>
     </div>
   )

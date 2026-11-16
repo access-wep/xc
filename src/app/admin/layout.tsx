@@ -59,6 +59,7 @@ export default function AdminLayout({
 
   const navItems = [
     { title: 'نظرة عامة', href: '/admin', icon: LayoutDashboard },
+    { title: 'محتوى الصفحة الرئيسية (CMS)', href: '/admin/content', icon: Sparkles },
     { title: 'طلبات المدفوعات', href: '/admin/payments', icon: FileCheck2 },
     { title: 'إدارة المستخدمين', href: '/admin/users', icon: Users },
     { title: 'الباقات والأسعار', href: '/admin/subscriptions', icon: CreditCard },
