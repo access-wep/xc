@@ -39,7 +39,11 @@ export default function AdminUsersPage() {
       let query = supabase.from('profiles').select('*').order('created_at', { ascending: false })
 
       if (searchTerm.trim()) {
-        query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+        // Sanitize search term to prevent PostgREST syntax injection or query breaking
+        const cleanTerm = searchTerm.replace(/[,()"'\\%*]/g, '').trim()
+        if (cleanTerm) {
+          query = query.or(`full_name.ilike.%${cleanTerm}%,email.ilike.%${cleanTerm}%`)
+        }
       }
 
       const { data, error } = await query

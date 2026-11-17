@@ -45,7 +45,26 @@ export default function LoginPage() {
           .eq('id', data.user.id)
           .single()
 
-        if (profile?.role === 'admin' || profile?.role === 'super_admin') {
+        const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+        const rawNext = searchParams?.get('next')
+        const safeNext =
+          rawNext &&
+          rawNext.startsWith('/') &&
+          !rawNext.startsWith('//') &&
+          !rawNext.startsWith('/\\') &&
+          !rawNext.includes(':')
+            ? rawNext
+            : null
+
+        const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
+
+        if (safeNext) {
+          if (safeNext.startsWith('/admin') && !isAdmin) {
+            router.push('/dashboard')
+          } else {
+            router.push(safeNext)
+          }
+        } else if (isAdmin) {
           router.push('/admin')
         } else {
           router.push('/dashboard')
@@ -63,10 +82,21 @@ export default function LoginPage() {
     setError(null)
     setIsGoogleLoading(true)
     try {
+      const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+      const rawNext = searchParams?.get('next')
+      const safeNext =
+        rawNext &&
+        rawNext.startsWith('/') &&
+        !rawNext.startsWith('//') &&
+        !rawNext.startsWith('/\\') &&
+        !rawNext.includes(':')
+          ? rawNext
+          : '/dashboard'
+
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`,
         },
       })
       if (oauthError) throw oauthError

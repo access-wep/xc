@@ -302,7 +302,7 @@ begin
     new.email,
     user_phone,
     user_age,
-    coalesce(new.raw_user_meta_data->>'role', 'user'),
+    'user', -- Strictly forced for security: never trust client metadata for roles
     true
   );
   return new;

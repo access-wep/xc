@@ -39,17 +39,28 @@ export default function AdminPaymentsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(true)
 
-  // Safe proof URL resolver
+  // Safe proof URL resolver - strictly defends against script injection & untrusted schemes
   const resolveProofUrl = (url: string | null) => {
     if (!url) return null
-    if (url.startsWith('data:image/') || url.startsWith('http://') || url.startsWith('https://')) {
-      return url
+    const clean = url.trim()
+    const lower = clean.toLowerCase()
+    if (lower.startsWith('javascript:') || lower.startsWith('vbscript:') || lower.startsWith('data:text/')) {
+      return null
     }
-    if (!url.startsWith('local_proof_')) {
-      const { data } = supabase.storage.from('payment_proofs').getPublicUrl(url)
+    if (
+      clean.startsWith('data:image/jpeg') ||
+      clean.startsWith('data:image/png') ||
+      clean.startsWith('data:image/webp') ||
+      clean.startsWith('https://') ||
+      clean.startsWith('http://')
+    ) {
+      return clean
+    }
+    if (!clean.startsWith('local_proof_')) {
+      const { data } = supabase.storage.from('payment_proofs').getPublicUrl(clean)
       if (data?.publicUrl) return data.publicUrl
     }
-    return url
+    return null
   }
 
   // Review & Action Modal
@@ -811,7 +822,7 @@ export default function AdminPaymentsPage() {
                         src={displayUrl}
                         alt="إيصال التحويل البنكي"
                         className="max-h-80 w-auto object-contain rounded-lg shadow-sm hover:scale-105 transition-transform duration-200 cursor-zoom-in"
-                        onClick={() => window.open(displayUrl, '_blank')}
+                        onClick={() => window.open(displayUrl, '_blank', 'noopener,noreferrer')}
                       />
                     </div>
                     <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1">

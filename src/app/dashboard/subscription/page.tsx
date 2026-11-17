@@ -222,6 +222,17 @@ export default function SubscriptionPage() {
       return
     }
 
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+    if (!ALLOWED_TYPES.includes(proofFile.type)) {
+      setPaymentError('صيغة الملف غير مدعومة. يرجى رفع صورة بصيغة JPG أو PNG أو WEBP فقط.')
+      return
+    }
+
+    if (proofFile.size > 5 * 1024 * 1024) {
+      setPaymentError('حجم الملف كبير جداً. الحد الأقصى المسموح به هو 5 ميجابايت.')
+      return
+    }
+
     setIsSubmittingPayment(true)
     setPaymentError(null)
 
@@ -650,15 +661,32 @@ export default function SubscriptionPage() {
                 <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                 <input
                   type="file"
-                  accept="image/*,.pdf"
+                  accept="image/jpeg,image/png,image/webp"
                   required
                   onChange={async (e) => {
                     const f = e.target.files?.[0] || null
-                    setProofFile(f)
-                    if (f && f.type.startsWith('image/')) {
+                    if (f) {
+                      const ALLOWED = ['image/jpeg', 'image/png', 'image/webp']
+                      if (!ALLOWED.includes(f.type)) {
+                        setPaymentError('يرجى اختيار صورة بصيغة JPG أو PNG أو WEBP فقط.')
+                        e.target.value = ''
+                        setProofFile(null)
+                        setProofPreviewUrl(null)
+                        return
+                      }
+                      if (f.size > 5 * 1024 * 1024) {
+                        setPaymentError('حجم الصورة كبير جداً، الحد الأقصى هو 5 ميجابايت.')
+                        e.target.value = ''
+                        setProofFile(null)
+                        setProofPreviewUrl(null)
+                        return
+                      }
+                      setPaymentError(null)
+                      setProofFile(f)
                       const prev = await convertFileToBase64(f)
                       setProofPreviewUrl(prev)
                     } else {
+                      setProofFile(null)
                       setProofPreviewUrl(null)
                     }
                   }}

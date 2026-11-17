@@ -37,7 +37,57 @@ export async function updateSession(request: NextRequest) {
     })
 
     // Refresh auth token if expired
-    await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    const pathname = request.nextUrl.pathname
+    const isPlaceholder = supabaseUrl.includes('placeholder')
+
+    if (!isPlaceholder) {
+      // 1. Strict Server/Edge Protection: /admin routes
+      if (pathname.startsWith('/admin')) {
+        if (!user) {
+          const loginUrl = new URL('/auth/login', request.url)
+          loginUrl.searchParams.set('next', pathname)
+          const redirectRes = NextResponse.redirect(loginUrl)
+          supabaseResponse.cookies.getAll().forEach((c) => redirectRes.cookies.set(c.name, c.value, c))
+          return redirectRes
+        }
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (profile?.role !== 'admin' && profile?.role !== 'super_admin') {
+          const dashUrl = new URL('/dashboard', request.url)
+          const redirectRes = NextResponse.redirect(dashUrl)
+          supabaseResponse.cookies.getAll().forEach((c) => redirectRes.cookies.set(c.name, c.value, c))
+          return redirectRes
+        }
+      }
+
+      // 2. Strict Server/Edge Protection: /dashboard routes
+      if (pathname.startsWith('/dashboard')) {
+        if (!user) {
+          const loginUrl = new URL('/auth/login', request.url)
+          loginUrl.searchParams.set('next', pathname)
+          const redirectRes = NextResponse.redirect(loginUrl)
+          supabaseResponse.cookies.getAll().forEach((c) => redirectRes.cookies.set(c.name, c.value, c))
+          return redirectRes
+        }
+      }
+
+      // 3. Authenticated user visiting /auth/login or /auth/register -> redirect to dashboard
+      if (user && (pathname === '/auth/login' || pathname === '/auth/register')) {
+        const dashUrl = new URL('/dashboard', request.url)
+        const redirectRes = NextResponse.redirect(dashUrl)
+        supabaseResponse.cookies.getAll().forEach((c) => redirectRes.cookies.set(c.name, c.value, c))
+        return redirectRes
+      }
+    }
   } catch (err) {
     // Graceful error handling for missing or invalid session
   }

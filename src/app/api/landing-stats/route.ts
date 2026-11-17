@@ -49,13 +49,20 @@ export async function GET() {
         ? plansResult.value.data
         : []
 
-    return NextResponse.json({
-      success: true,
-      stats: realStats,
-      cms: cmsContent,
-      plans: plans,
-      timestamp: new Date().toISOString(),
-    })
+    return NextResponse.json(
+      {
+        success: true,
+        stats: realStats,
+        cms: cmsContent,
+        plans: plans,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+        },
+      }
+    )
   } catch (error: any) {
     console.error('Error fetching landing stats:', error)
     return NextResponse.json(
