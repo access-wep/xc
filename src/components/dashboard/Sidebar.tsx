@@ -39,6 +39,12 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       icon: LayoutDashboard,
     },
     {
+      title: 'متابعة العادات الشهرية',
+      href: '/dashboard/monthly-habits',
+      icon: CalendarDays,
+      badge: 'جديد',
+    },
+    {
       title: 'جدول اليوم التفصيلي',
       href: '/dashboard/today',
       icon: CalendarCheck2,

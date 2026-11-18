@@ -21,6 +21,8 @@ import {
   Sparkles,
   Menu,
   X,
+  Image as ImageIcon,
+  BarChart3,
 } from 'lucide-react'
 
 export default function AdminLayout({
@@ -59,6 +61,8 @@ export default function AdminLayout({
 
   const navItems = [
     { title: 'نظرة عامة', href: '/admin', icon: LayoutDashboard },
+    { title: 'إدارة المحتوى التحفيزي', href: '/admin/motivation', icon: ImageIcon },
+    { title: 'إحصائيات المنصة والعادات', href: '/admin/analytics', icon: BarChart3 },
     { title: 'محتوى الصفحة الرئيسية (CMS)', href: '/admin/content', icon: Sparkles },
     { title: 'طلبات المدفوعات', href: '/admin/payments', icon: FileCheck2 },
     { title: 'إدارة المستخدمين', href: '/admin/users', icon: Users },

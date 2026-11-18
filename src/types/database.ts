@@ -166,8 +166,71 @@ export interface Habit {
   target_days_per_week: number
   is_active: boolean
   sort_order: number
+  description?: string | null
+  category?: string | null
+  recurrence_type?: 'daily' | 'specific_days' | 'times_per_week' | 'times_per_month' | 'custom'
+  target_days_json?: string[] | null
+  monthly_target?: number
+  weekly_target?: number
+  rest_days_json?: string[] | null
+  start_date?: string | null
+  end_date?: string | null
+  is_archived?: boolean
+  custom_unit?: string | null
   created_at: string
   updated_at: string
+}
+
+export interface MonthlyHabitSettings {
+  user_id: string
+  preferred_view: 'original' | 'enhanced'
+  auto_rotate_images: boolean
+  rotate_interval_seconds: number
+  sound_enabled: boolean
+  sound_volume: number
+  favorite_images: string[]
+  reduced_motion: boolean
+  locked_months: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface MotivationalContent {
+  id: string
+  title: string
+  image_url: string
+  category: 'nature' | 'cosmic' | 'cinematic' | 'fantasy' | 'mixed'
+  quote_ar: string
+  quote_subtext?: string | null
+  milestone_trigger: 'start_of_day' | 'progress_50' | 'completed_100' | 'streak' | 'returning' | 'all'
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at?: string
+}
+
+export interface HabitTemplate {
+  id: string
+  user_id: string | null
+  title: string
+  description: string | null
+  category: 'worship' | 'study' | 'health' | 'lifestyle' | 'daily' | 'custom' | 'blank'
+  icon: string
+  color: string
+  is_system: boolean
+  habits_data: Array<{
+    name: string
+    icon: string
+    color: string
+    category?: string
+    weekly_target?: number
+    monthly_target?: number
+    recurrence_type?: string
+    target_days_json?: string[]
+    rest_days_json?: string[]
+    description?: string
+  }>
+  created_at: string
 }
 
 export interface HabitLog {
